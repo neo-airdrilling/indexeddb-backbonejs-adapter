@@ -21,20 +21,23 @@
 
   window.IDBCursor = window.IDBCursor || window.webkitIDBCursor || window.mozIDBCursor || window.msIDBCursor ;
 
+  var BackboneIndexedDBAdapter = {};
+
   // Driver object
   // That's the interesting part.
   // There is a driver for each schema provided. The schema is a te combination of name (for the database), a version as well as migrations to reach that
   // version of the database.
   function Driver(schema, ready, nolog) {
+    BackboneIndexedDBAdapter.nolog = nolog;
+
     this.schema     = schema;
     this.ready     = ready;
     this.error     = null;
     this.transactions  = []; // Used to list all transactions and keep track of active ones.
     this.db       = null;
-    this.nolog     = nolog;
     this.supportOnUpgradeNeeded = false;
     var lastMigrationPathVersion = _.last(this.schema.migrations).version;
-    if (!this.nolog) debugLog("opening database " + this.schema.id + " in version #" + lastMigrationPathVersion);
+    debugLog("opening database " + this.schema.id + " in version #" + lastMigrationPathVersion);
     this.dbRequest   = indexedDB.open(this.schema.id,lastMigrationPathVersion); //schema version need to be an unsigned long
 
     this.launchMigrationPath = function(dbVersion) {
@@ -50,7 +53,7 @@
     };
 
     this.dbRequest.onblocked = function(event){
-      if (!this.nolog) debugLog("blocked");
+      debugLog("blocked");
     };
 
     this.dbRequest.onsuccess = function (e) {
@@ -89,12 +92,14 @@
 
       this.supportOnUpgradeNeeded = true;
 
-      if (!this.nolog) debugLog("onupgradeneeded = " + iDBVersionChangeEvent.oldVersion + " => " + iDBVersionChangeEvent.newVersion);
+      debugLog("onupgradeneeded = " + iDBVersionChangeEvent.oldVersion + " => " + iDBVersionChangeEvent.newVersion);
       this.launchMigrationPath(iDBVersionChangeEvent.oldVersion);
     }.bind(this);
   }
 
   function debugLog(str) {
+    if (BackboneIndexedDBAdapter.nolog) return;
+
     if (typeof window !== "undefined" && typeof window.console !== "undefined" && typeof window.console.log !== "undefined") {
      window.console.log(str);
     } else if(console.log !== "undefined") {
@@ -119,13 +124,13 @@
 
     // Performs all the migrations to reach the right version of the database.
     migrate: function (migrations, version, options) {
-      if (!this.nolog) debugLog("Starting migrations from " + version);
+      debugLog("Starting migrations from " + version);
       this._migrate_next(migrations, version, options);
     },
 
     // Performs the next migrations. This method is private and should probably not be called.
     _migrate_next: function (migrations, version, options) {
-      if (!this.nolog) debugLog("_migrate_next begin version from #" + version);
+      debugLog("_migrate_next begin version from #" + version);
       var that = this;
       var migration = migrations.shift();
       if (migration) {
@@ -142,23 +147,23 @@
             };
           }
           // First, let's run the before script
-          if (!this.nolog) debugLog("_migrate_next begin before version #" + migration.version);
+          debugLog("_migrate_next begin before version #" + migration.version);
           migration.before(function () {
-            if (!this.nolog) debugLog("_migrate_next done before version #" + migration.version);
+            debugLog("_migrate_next done before version #" + migration.version);
 
             var continueMigration = function (e) {
-              if (!this.nolog) debugLog("_migrate_next continueMigration version #" + migration.version);
+              debugLog("_migrate_next continueMigration version #" + migration.version);
 
               var transaction = this.dbRequest.transaction || versionRequest.result;
-              if (!this.nolog) debugLog("_migrate_next begin migrate version #" + migration.version);
+              debugLog("_migrate_next begin migrate version #" + migration.version);
 
               migration.migrate(transaction, function () {
-                if (!this.nolog) debugLog("_migrate_next done migrate version #" + migration.version);
+                debugLog("_migrate_next done migrate version #" + migration.version);
                 // Migration successfully appliedn let's go to the next one!
-                if (!this.nolog) debugLog("_migrate_next begin after version #" + migration.version);
+                debugLog("_migrate_next begin after version #" + migration.version);
                 migration.after(function () {
-                  if (!this.nolog) debugLog("_migrate_next done after version #" + migration.version);
-                  if (!this.nolog) debugLog("Migrated to " + migration.version);
+                  debugLog("_migrate_next done after version #" + migration.version);
+                  debugLog("Migrated to " + migration.version);
 
                   //last modification occurred, need finish
                   if(migrations.length === 0) {
@@ -167,19 +172,18 @@
                       // No more migration
                       options.success();
                     } else{*/
-                      if (!this.nolog) debugLog("_migrate_next setting transaction.oncomplete to finish version #" + migration.version);
+                      debugLog("_migrate_next setting transaction.oncomplete to finish version #" + migration.version);
                       transaction.oncomplete = function() {
-                        if (!that.nolog) debugLog("_migrate_next done transaction.oncomplete version #" + migration.version);
-
-                        if (!that.nolog) debugLog("Done migrating");
+                        debugLog("_migrate_next done transaction.oncomplete version #" + migration.version);
+                        debugLog("Done migrating");
                         // No more migration
                         options.success();
                       };
                     //}
                   } else {
-                    if (!this.nolog) debugLog("_migrate_next setting transaction.oncomplete to recursive _migrate_next version #" + migration.version);
+                    debugLog("_migrate_next setting transaction.oncomplete to recursive _migrate_next version #" + migration.version);
                     transaction.oncomplete = function() {
-                      if (!this.nolog) debugLog("_migrate_next end from version #" + version + " to " + migration.version);
+                      debugLog("_migrate_next end from version #" + version + " to " + migration.version);
                       that._migrate_next(migrations, version, options);
                     };
                   }
@@ -189,7 +193,7 @@
             }.bind(this);
 
             if(!this.supportOnUpgradeNeeded){
-              if (!this.nolog) debugLog("_migrate_next begin setVersion version #" + migration.version);
+              debugLog("_migrate_next begin setVersion version #" + migration.version);
               var versionRequest = this.db.setVersion(migration.version);
               versionRequest.onsuccess = continueMigration;
               versionRequest.onerror = options.error;
@@ -199,7 +203,7 @@
           }.bind(this));
         } else {
           // No need to apply this migration
-          if (!this.nolog) debugLog("Skipping migration " + migration.version);
+          debugLog("Skipping migration " + migration.version);
           this._migrate_next(migrations, version, options);
         }
       }
@@ -207,7 +211,7 @@
 
     // This is the main method, called by the ExecutionQueue when the driver is ready (database open and migration performed)
     execute: function (storeName, method, object, options) {
-      if (!this.nolog) debugLog("execute : " + method + " on " + storeName + " for " + object.id);
+      debugLog("execute : " + method + " on " + storeName + " for " + object.id);
       switch (method) {
         case "create":
           this.create(storeName, object, options);
