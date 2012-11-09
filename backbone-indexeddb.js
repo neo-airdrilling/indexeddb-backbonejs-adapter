@@ -53,7 +53,7 @@
       var clonedMigrations = _.clone(schema.migrations);
       this.migrate(clonedMigrations, dbVersion, {
         success: function () {
-          this.ready();
+          debugLog("Migration(s) succeeded.");
         }.bind(this),
         error: function () {
           this.error = "Database not up to date. " + dbVersion + " expected was " + lastMigrationPathVersion;
@@ -69,7 +69,8 @@
       debugLog("blocked");
     };
     this.dbRequest.onsuccess = function (e) {
-      debugLog("onsuccess");
+      debugLog("Database opened successfully");
+      this.ready();
       this.db = e.target.result; // Attach the connection to the queue.
     }.bind(this);
     this.dbRequest.onerror = function (e) {
