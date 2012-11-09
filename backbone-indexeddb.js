@@ -9,6 +9,16 @@
     return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
   }
 
+  function debugLog(str) {
+    if (BackboneIndexedDBAdapter.nolog) return;
+
+    if (typeof window !== "undefined" && typeof window.console !== "undefined" && typeof window.console.log !== "undefined") {
+      window.console.log(str);
+    } else if(console.log !== "undefined") {
+      console.log(str);
+    }
+  }
+
   if(typeof exports !== 'undefined'){
     _ = require('underscore');
     Backbone = require('backbone');
@@ -21,6 +31,7 @@
 
   window.IDBCursor = window.IDBCursor || window.webkitIDBCursor || window.mozIDBCursor || window.msIDBCursor ;
 
+  // Adapter options
   var BackboneIndexedDBAdapter = {};
 
   // Driver object
@@ -30,15 +41,13 @@
   function Driver(schema, ready, nolog) {
     BackboneIndexedDBAdapter.nolog = nolog;
 
-    this.schema     = schema;
-    this.ready     = ready;
-    this.error     = null;
+    this.schema = schema;
+    this.ready = ready;
+    this.error = null;
     this.transactions  = []; // Used to list all transactions and keep track of active ones.
-    this.db       = null;
-    this.supportOnUpgradeNeeded = false;
+    this.db = null;
+
     var lastMigrationPathVersion = _.last(this.schema.migrations).version;
-    debugLog("opening database " + this.schema.id + " in version #" + lastMigrationPathVersion);
-    this.dbRequest   = indexedDB.open(this.schema.id,lastMigrationPathVersion); //schema version need to be an unsigned long
 
     this.launchMigrationPath = function(dbVersion) {
       var clonedMigrations = _.clone(schema.migrations);
@@ -52,59 +61,28 @@
       });
     };
 
+    // opening database
+    debugLog("opening database " + this.schema.id + " in version #" + lastMigrationPathVersion);
+    this.dbRequest = indexedDB.open(this.schema.id, lastMigrationPathVersion); //schema version need to be an unsigned long
+
     this.dbRequest.onblocked = function(event){
       debugLog("blocked");
     };
-
     this.dbRequest.onsuccess = function (e) {
-      this.db = e.target.result; // Attach the connection ot the queue.
-      if(!this.supportOnUpgradeNeeded)
-      {
-        var currentIntDBVersion = (parseInt(this.db.version, 10) || 0); // we need convert beacuse chrome store in integer and ie10 DP4+ in int;
-        var lastMigrationInt = (parseInt(lastMigrationPathVersion, 10) || 0); // And make sure we compare numbers with numbers.
-
-        if (currentIntDBVersion === lastMigrationInt) { //if support new event onupgradeneeded will trigger the ready function
-          // No migration to perform!
-
-          this.ready();
-        } else if (currentIntDBVersion < lastMigrationInt ) {
-          // We need to migrate up to the current migration defined in the database
-          this.launchMigrationPath(currentIntDBVersion);
-        } else {
-          // Looks like the IndexedDB is at a higher version than the current driver schema.
-          this.error = "Database version is greater than current code " + currentIntDBVersion + " expected was " + lastMigrationInt;
-        }
-      }
+      debugLog("onsuccess");
+      this.db = e.target.result; // Attach the connection to the queue.
     }.bind(this);
-
     this.dbRequest.onerror = function (e) {
-      // Failed to open the database
       this.error = "Couldn't not connect to the database";
     }.bind(this);
-
     this.dbRequest.onabort = function (e) {
-      // Failed to open the database
       this.error = "Connection to the database aborted";
     }.bind(this);
-
-    this.dbRequest.onupgradeneeded = function(iDBVersionChangeEvent){
-      this.db =iDBVersionChangeEvent.target.transaction.db;
-
-      this.supportOnUpgradeNeeded = true;
-
-      debugLog("onupgradeneeded = " + iDBVersionChangeEvent.oldVersion + " => " + iDBVersionChangeEvent.newVersion);
-      this.launchMigrationPath(iDBVersionChangeEvent.oldVersion);
+    this.dbRequest.onupgradeneeded = function(e) {
+      debugLog("onupgradeneeded = " + e.oldVersion + " => " + e.newVersion);
+      this.db = e.target.result;
+      this.launchMigrationPath(e.oldVersion);
     }.bind(this);
-  }
-
-  function debugLog(str) {
-    if (BackboneIndexedDBAdapter.nolog) return;
-
-    if (typeof window !== "undefined" && typeof window.console !== "undefined" && typeof window.console.log !== "undefined") {
-     window.console.log(str);
-    } else if(console.log !== "undefined") {
-      console.log(str);
-    }
   }
 
   // Driver Prototype
@@ -130,83 +108,19 @@
 
     // Performs the next migrations. This method is private and should probably not be called.
     _migrate_next: function (migrations, version, options) {
-      debugLog("_migrate_next begin version from #" + version);
-      var that = this;
-      var migration = migrations.shift();
-      if (migration) {
-        if (!version || version < migration.version) {
-          // We need to apply this migration-
-          if (typeof migration.before == "undefined") {
-            migration.before = function (next) {
-              next();
-            };
-          }
-          if (typeof migration.after == "undefined") {
-            migration.after = function (next) {
-              next();
-            };
-          }
-          // First, let's run the before script
-          debugLog("_migrate_next begin before version #" + migration.version);
-          migration.before(function () {
-            debugLog("_migrate_next done before version #" + migration.version);
-
-            var continueMigration = function (e) {
-              debugLog("_migrate_next continueMigration version #" + migration.version);
-
-              var transaction = this.dbRequest.transaction || versionRequest.result;
-              debugLog("_migrate_next begin migrate version #" + migration.version);
-
-              migration.migrate(transaction, function () {
-                debugLog("_migrate_next done migrate version #" + migration.version);
-                // Migration successfully appliedn let's go to the next one!
-                debugLog("_migrate_next begin after version #" + migration.version);
-                migration.after(function () {
-                  debugLog("_migrate_next done after version #" + migration.version);
-                  debugLog("Migrated to " + migration.version);
-
-                  //last modification occurred, need finish
-                  if(migrations.length === 0) {
-                    /*if(this.supportOnUpgradeNeeded){
-                      debugLog("Done migrating");
-                      // No more migration
-                      options.success();
-                    } else{*/
-                      debugLog("_migrate_next setting transaction.oncomplete to finish version #" + migration.version);
-                      transaction.oncomplete = function() {
-                        debugLog("_migrate_next done transaction.oncomplete version #" + migration.version);
-                        debugLog("Done migrating");
-                        // No more migration
-                        options.success();
-                      };
-                    //}
-                  } else {
-                    debugLog("_migrate_next setting transaction.oncomplete to recursive _migrate_next version #" + migration.version);
-                    transaction.oncomplete = function() {
-                      debugLog("_migrate_next end from version #" + version + " to " + migration.version);
-                      that._migrate_next(migrations, version, options);
-                    };
-                  }
-
-                }.bind(this));
-              }.bind(this));
-            }.bind(this);
-
-            if(!this.supportOnUpgradeNeeded){
-              debugLog("_migrate_next begin setVersion version #" + migration.version);
-              var versionRequest = this.db.setVersion(migration.version);
-              versionRequest.onsuccess = continueMigration;
-              versionRequest.onerror = options.error;
-            } else {
-              continueMigration();
-            }
-          }.bind(this));
-        } else {
-          // No need to apply this migration
-          debugLog("Skipping migration " + migration.version);
-          this._migrate_next(migrations, version, options);
-        }
+      // base case
+      if (migrations.length === 0) {
+        options.success();
+        return;
       }
+
+      var migration = migrations.shift();
+      debugLog("_migrate_next begin currentVersion #" + version + " looking at migration #" + migration.version);
+      if (!version || version < migration.version) {
+        migration.migrate(this.dbRequest.result);
+      }
+
+      this._migrate_next(migrations, version, options);
     },
 
     // This is the main method, called by the ExecutionQueue when the driver is ready (database open and migration performed)
@@ -236,6 +150,8 @@
     },
 
     // Writes the json to the storeName in db. It is a create operations, which means it will fail if the key already exists
+    // Writes the json to the storeName in db.
+    // It is a create operations, which means it will fail if the key already exists.
     // options are just success and error callbacks.
     create: function (storeName, object, options) {
       var writeTransaction = this.db.transaction([storeName], "readwrite");
@@ -261,7 +177,8 @@
       };
     },
 
-    // Writes the json to the storeName in db. It is an update operation, which means it will overwrite the value if the key already exist
+    // Writes the json to the storeName in db.
+    // It is an update operation, which means it will overwrite the value if the key already exist.
     // options are just success and error callbacks.
     update: function (storeName, object, options) {
       var writeTransaction = this.db.transaction([storeName], "readwrite");
@@ -315,10 +232,10 @@
           }
         };
         getRequest.onerror = function () {
-          options.error("Not Found"); // We couldn't find the record.
+          options.error("Not Found");
         };
       } else {
-        options.error("Not Found"); // We couldn't even look for it, as we don't have enough data.
+        options.error("Not Found");
       }
     },
 
@@ -449,6 +366,7 @@
         };
       }
     },
+
     close :function(){
       if(this.db){
         this.db.close();
