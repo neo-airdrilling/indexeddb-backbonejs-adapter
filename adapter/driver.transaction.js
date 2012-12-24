@@ -27,136 +27,39 @@ window.Driver = (function(_super) {
   };
 
   Driver.prototype.execute = function(storeName, method, object, options) {
+    var request, transaction;
     this.logger("execute : " + method + " on " + storeName + " for " + object.id);
     switch (method) {
       case "create":
-        return this.create(storeName, object, options);
+        transaction = this.db.transaction([storeName], 'readwrite');
+        request = new Driver.AddRequest(transaction, storeName, object.toJSON(), options);
+        break;
       case "read":
         if (object.id || object.cid) {
-          return this.read(storeName, object, options);
+          transaction = this.db.transaction([storeName], "readonly");
+          request = new Driver.GetRequest(transaction, storeName, object.toJSON(), options);
         } else {
-          return this.query(storeName, object, options);
+          this.query(storeName, object, options);
         }
         break;
       case "update":
-        return this.update(storeName, object, options);
+        transaction = this.db.transaction([storeName], 'readwrite');
+        request = new Driver.PutRequest(transaction, storeName, object.toJSON(), options);
+        break;
       case "delete":
+        transaction = this.db.transaction([storeName], 'readwrite');
         if (object.id || object.cid) {
-          return this["delete"](storeName, object, options);
+          request = new Driver.DeleteRequest(transaction, storeName, object.toJSON(), options);
         } else {
-          return this.clear(storeName, object, options);
+          request = new Driver.ClearRequest(transaction, storeName, object.toJSON(), options);
         }
         break;
       default:
-        return this.logger("Unknown method", method, "is called for", object);
+        this.logger("Unknown method", method, "is called for", object);
     }
-  };
-
-  Driver.prototype.create = function(storeName, object, options) {
-    var json, store, writeRequest, writeTransaction;
-    writeTransaction = this.db.transaction([storeName], 'readwrite');
-    store = writeTransaction.objectStore(storeName);
-    json = object.toJSON();
-    if (json.id === void 0) {
-      json.id = guid();
+    if (request) {
+      return request.execute();
     }
-    if (json.id === null) {
-      delete json.id;
-    }
-    if (!store.keyPath) {
-      writeRequest = store.add(json, json.id);
-    } else {
-      writeRequest = store.add(json);
-    }
-    writeRequest.onerror = function(e) {
-      return options.error(e);
-    };
-    return writeRequest.onsuccess = function(e) {
-      return options.success(json);
-    };
-  };
-
-  Driver.prototype.update = function(storeName, object, options) {
-    var json, store, writeRequest, writeTransaction;
-    writeTransaction = this.db.transaction([storeName], 'readwrite');
-    store = writeTransaction.objectStore(storeName);
-    json = object.toJSON();
-    writeRequest;
-
-    if (!json.id) {
-      json.id = guid();
-    }
-    if (!store.keyPath) {
-      writeRequest = store.put(json, json.id);
-    } else {
-      writeRequest = store.put(json);
-    }
-    writeRequest.onerror = function(e) {
-      return options.error(e);
-    };
-    return writeRequest.onsuccess = function(e) {
-      return options.success(json);
-    };
-  };
-
-  Driver.prototype.read = function(storeName, object, options) {
-    var getRequest, json, readTransaction, store;
-    readTransaction = this.db.transaction([storeName], "readonly");
-    this._track_transaction(readTransaction);
-    store = readTransaction.objectStore(storeName);
-    json = object.toJSON();
-    getRequest = null;
-    if (json.id) {
-      getRequest = store.get(json.id);
-    } else {
-      _.each(store.indexNames, function(key, index) {
-        index = store.index(key);
-        if (json[index.keyPath] && !getRequest) {
-          return getRequest = index.get(json[index.keyPath]);
-        }
-      });
-    }
-    if (getRequest) {
-      getRequest.onsuccess = function(event) {
-        if (event.target.result) {
-          return options.success(event.target.result);
-        } else {
-          return options.error("Not Found");
-        }
-      };
-      return getRequest.onerror = function() {
-        return options.error("Not Found");
-      };
-    } else {
-      return ptions.error("Not Found");
-    }
-  };
-
-  Driver.prototype["delete"] = function(storeName, object, options) {
-    var deleteRequest, deleteTransaction, json, store;
-    deleteTransaction = this.db.transaction([storeName], 'readwrite');
-    store = deleteTransaction.objectStore(storeName);
-    json = object.toJSON();
-    deleteRequest = store["delete"](json.id);
-    deleteRequest.onsuccess = function(event) {
-      return options.success(null);
-    };
-    return deleteRequest.onerror = function(event) {
-      return options.error("Not Deleted");
-    };
-  };
-
-  Driver.prototype.clear = function(storeName, object, options) {
-    var deleteRequest, deleteTransaction, store;
-    deleteTransaction = this.db.transaction([storeName], "readwrite");
-    store = deleteTransaction.objectStore(storeName);
-    deleteRequest = store.clear();
-    deleteRequest.onsuccess = function(event) {
-      return options.success(null);
-    };
-    return deleteRequest.onerror = function(event) {
-      return options.error("Not Cleared");
-    };
   };
 
   Driver.prototype.query = function(storeName, collection, options) {

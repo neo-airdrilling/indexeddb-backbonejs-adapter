@@ -14,117 +14,27 @@ class window.Driver extends window.Driver
   execute: (storeName, method, object, options) ->
     @logger("execute : " + method +  " on " + storeName + " for " + object.id)
     switch method
-      when "create" then @create(storeName, object, options)
+      when "create"
+        transaction = @db.transaction([storeName], 'readwrite')
+        request = new Driver.AddRequest(transaction, storeName, object.toJSON(), options)
       when "read"
         if object.id || object.cid
-          @read(storeName, object, options) # It's a model
+          transaction = @db.transaction([storeName], "readonly")
+          request = new Driver.GetRequest(transaction, storeName, object.toJSON(), options)
         else
           @query(storeName, object, options) # It's a collection
-      when "update" then @update(storeName, object, options) # We may want to check that this is not a collection. TOFIX
+      when "update" # We may want to check that this is not a collection. TOFIX
+        transaction = @db.transaction([storeName], 'readwrite')
+        request = new Driver.PutRequest(transaction, storeName, object.toJSON(), options)
       when "delete"
+        transaction = @db.transaction([storeName], 'readwrite')
         if object.id || object.cid
-          @delete(storeName, object, options)
+          request = new Driver.DeleteRequest(transaction, storeName, object.toJSON(), options)
         else
-          @clear(storeName, object, options)
+          request = new Driver.ClearRequest(transaction, storeName, object.toJSON(), options)
       else
         @logger "Unknown method", method, "is called for", object
-
-  # Writes the json to the storeName in db. It is a create operations, which means it will fail if the key already exists
-  # options are just success and error callbacks.
-  create: (storeName, object, options) ->
-    writeTransaction = @db.transaction([storeName], 'readwrite')
-    # @_track_transaction(writeTransaction);
-    store = writeTransaction.objectStore(storeName)
-    json = object.toJSON()
-
-    if (json.id == undefined) then json.id = guid()
-    if (json.id == null) then delete json.id
-
-    if (!store.keyPath)
-      writeRequest = store.add(json, json.id)
-    else
-      writeRequest = store.add(json)
-
-    writeRequest.onerror = (e) ->
-      options.error(e)
-    writeRequest.onsuccess = (e) ->
-      options.success(json)
-
-  # Writes the json to the storeName in db. It is an update operation, which means it will overwrite the value if the key already exist
-  # options are just success and error callbacks.
-  update: (storeName, object, options) ->
-    writeTransaction = @db.transaction([storeName], 'readwrite')
-    #@_track_transaction(writeTransaction)
-    store = writeTransaction.objectStore(storeName)
-    json = object.toJSON()
-    writeRequest
-
-    if (!json.id) then json.id = guid()
-
-    if (!store.keyPath)
-      writeRequest = store.put(json, json.id)
-    else
-      writeRequest = store.put(json)
-
-    writeRequest.onerror = (e) ->
-      options.error(e)
-    writeRequest.onsuccess = (e) ->
-      options.success(json)
-
-  # Reads from storeName in db with json.id if it's there of with any json.xxxx as long as xxx is an index in storeName
-  read: (storeName, object, options) ->
-    readTransaction = @db.transaction([storeName], "readonly")
-    @_track_transaction(readTransaction)
-
-    store = readTransaction.objectStore(storeName)
-    json = object.toJSON()
-
-    getRequest = null
-    if (json.id)
-      getRequest = store.get(json.id)
-    else
-      # We need to find which index we have
-      _.each store.indexNames, (key, index) ->
-        index = store.index(key)
-        if (json[index.keyPath] && !getRequest)
-          getRequest = index.get(json[index.keyPath])
-    if (getRequest)
-      getRequest.onsuccess = (event) ->
-          if (event.target.result)
-            options.success(event.target.result)
-          else
-            options.error("Not Found")
-      getRequest.onerror = () ->
-        options.error("Not Found") # We couldn't find the record.
-    else
-        ptions.error("Not Found") # We couldn't even look for it, as we don't have enough data.
-
-  # Deletes the json.id key and value in storeName from db.
-  delete: (storeName, object, options) ->
-    deleteTransaction = @db.transaction([storeName], 'readwrite')
-    #@_track_transaction(deleteTransaction)
-
-    store = deleteTransaction.objectStore(storeName)
-    json = object.toJSON()
-
-    deleteRequest = store.delete(json.id)
-    deleteRequest.onsuccess = (event) ->
-        options.success(null)
-    deleteRequest.onerror = (event) ->
-        options.error("Not Deleted")
-
-  # Clears all records for storeName from db.
-  clear: (storeName, object, options) ->
-    deleteTransaction = @db.transaction([storeName], "readwrite")
-    #@_track_transaction(deleteTransaction)
-
-    store = deleteTransaction.objectStore(storeName)
-
-    deleteRequest = store.clear()
-    deleteRequest.onsuccess = (event) ->
-      options.success(null)
-    deleteRequest.onerror = (event) ->
-      options.error("Not Cleared")
+    request.execute() if request
 
   # Performs a query on storeName in db.
   # options may include :
