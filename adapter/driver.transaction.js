@@ -27,9 +27,7 @@ window.Driver = (function(_super) {
   };
 
   Driver.prototype.execute = function(storeName, method, object, options) {
-    if (!this.nolog) {
-      debugLog("execute : " + method + " on " + storeName + " for " + object.id);
-    }
+    this.logger("execute : " + method + " on " + storeName + " for " + object.id);
     switch (method) {
       case "create":
         return this.create(storeName, object, options);
@@ -50,7 +48,7 @@ window.Driver = (function(_super) {
         }
         break;
       default:
-        return debugLog("HUH");
+        return this.logger("Unknown method", method, "is called for", object);
     }
   };
 

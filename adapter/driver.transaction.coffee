@@ -12,22 +12,22 @@ class window.Driver extends window.Driver
 
   # This is the main method, called by the ExecutionQueue when the driver is ready (database open and migration performed)
   execute: (storeName, method, object, options) ->
-    debugLog("execute : " + method +  " on " + storeName + " for " + object.id) unless @nolog
+    @logger("execute : " + method +  " on " + storeName + " for " + object.id)
     switch method
       when "create" then @create(storeName, object, options)
       when "read"
-        if (object.id || object.cid)
+        if object.id || object.cid
           @read(storeName, object, options) # It's a model
         else
           @query(storeName, object, options) # It's a collection
       when "update" then @update(storeName, object, options) # We may want to check that this is not a collection. TOFIX
       when "delete"
-        if (object.id || object.cid)
-            @delete(storeName, object, options)
+        if object.id || object.cid
+          @delete(storeName, object, options)
         else
-            @clear(storeName, object, options)
+          @clear(storeName, object, options)
       else
-        debugLog("HUH")
+        @logger "Unknown method", method, "is called for", object
 
   # Writes the json to the storeName in db. It is a create operations, which means it will fail if the key already exists
   # options are just success and error callbacks.
@@ -53,23 +53,23 @@ class window.Driver extends window.Driver
   # Writes the json to the storeName in db. It is an update operation, which means it will overwrite the value if the key already exist
   # options are just success and error callbacks.
   update: (storeName, object, options) ->
-      writeTransaction = @db.transaction([storeName], 'readwrite')
-      #@_track_transaction(writeTransaction)
-      store = writeTransaction.objectStore(storeName)
-      json = object.toJSON()
-      writeRequest
+    writeTransaction = @db.transaction([storeName], 'readwrite')
+    #@_track_transaction(writeTransaction)
+    store = writeTransaction.objectStore(storeName)
+    json = object.toJSON()
+    writeRequest
 
-      if (!json.id) then json.id = guid()
+    if (!json.id) then json.id = guid()
 
-      if (!store.keyPath)
-        writeRequest = store.put(json, json.id)
-      else
-        writeRequest = store.put(json)
+    if (!store.keyPath)
+      writeRequest = store.put(json, json.id)
+    else
+      writeRequest = store.put(json)
 
-      writeRequest.onerror = (e) ->
-        options.error(e)
-      writeRequest.onsuccess = (e) ->
-        options.success(json)
+    writeRequest.onerror = (e) ->
+      options.error(e)
+    writeRequest.onsuccess = (e) ->
+      options.success(json)
 
   # Reads from storeName in db with json.id if it's there of with any json.xxxx as long as xxx is an index in storeName
   read: (storeName, object, options) ->
@@ -78,7 +78,6 @@ class window.Driver extends window.Driver
 
     store = readTransaction.objectStore(storeName)
     json = object.toJSON()
-
 
     getRequest = null
     if (json.id)
@@ -102,17 +101,17 @@ class window.Driver extends window.Driver
 
   # Deletes the json.id key and value in storeName from db.
   delete: (storeName, object, options) ->
-      deleteTransaction = @db.transaction([storeName], 'readwrite')
-      #@_track_transaction(deleteTransaction)
+    deleteTransaction = @db.transaction([storeName], 'readwrite')
+    #@_track_transaction(deleteTransaction)
 
-      store = deleteTransaction.objectStore(storeName)
-      json = object.toJSON()
+    store = deleteTransaction.objectStore(storeName)
+    json = object.toJSON()
 
-      deleteRequest = store.delete(json.id)
-      deleteRequest.onsuccess = (event) ->
-          options.success(null)
-      deleteRequest.onerror = (event) ->
-          options.error("Not Deleted")
+    deleteRequest = store.delete(json.id)
+    deleteRequest.onsuccess = (event) ->
+        options.success(null)
+    deleteRequest.onerror = (event) ->
+        options.error("Not Deleted")
 
   # Clears all records for storeName from db.
   clear: (storeName, object, options) ->
@@ -126,7 +125,6 @@ class window.Driver extends window.Driver
       options.success(null)
     deleteRequest.onerror = (event) ->
       options.error("Not Cleared")
-
 
   # Performs a query on storeName in db.
   # options may include :
@@ -205,7 +203,7 @@ class window.Driver extends window.Driver
               cursor.continue() # We need to 'terminate' the cursor cleany, by moving to the end */
           else if (options.offset && options.offset > skipped)
             skipped++
-            cursor.continue() # We need to Moving the cursor forward 
+            cursor.continue() # We need to Moving the cursor forward
           else
             # This time, it looks like it's good!
             if (options.addIndividually)

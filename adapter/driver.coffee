@@ -6,6 +6,14 @@ class window.Driver
     @transactions = [] # Used to list all transactions and keep track of active ones.
     @db = null
     @nolog = nolog
+
+    @logger = ->
+      if nolog
+        if window?.console?.log?
+          window.console.log.apply window.console, arguments
+        else if console?.log?
+          console.log apply console, arguments
+
     @supportOnUpgradeNeeded = false
 
     @lastMigrationPathVersion = _.last(schema.migrations).version
@@ -13,17 +21,17 @@ class window.Driver
     @launchMigrationPath = (dbVersion) ->
       clonedMigrations = _.clone(schema.migrations)
       @migrate clonedMigrations, dbVersion, {
-          success: =>
-            @ready()
-          error: =>
-            @error = "Database not up to date. #{dbVersion} expected was #{@lastMigrationPathVersion}"
+        success: =>
+          @ready()
+        error: =>
+          @error = "Database not up to date. #{dbVersion} expected was #{@lastMigrationPathVersion}"
       }
 
-    debugLog "opening database", schema.id, "in version #", @lastMigrationPathVersion unless @nolog
+    @logger "opening database", schema.id, "in version #", @lastMigrationPathVersion
     @dbRequest = indexedDB.open(schema.id, @lastMigrationPathVersion) # schema version need to be an unsigned long
 
     @dbRequest.onblocked = (e) =>
-      debugLog("blocked") unless @nolog
+      @logger("blocked")
 
     @dbRequest.onsuccess = (e) =>
       @db = e.target.result # Attach the connection ot the queue.
@@ -54,20 +62,20 @@ class window.Driver
 
       @supportOnUpgradeNeeded = true
 
-      debugLog("onupgradeneeded = #{iDBVersionChangeEvent.oldVersion} => #{iDBVersionChangeEvent.newVersion}") if (!@nolog)
+      @logger("onupgradeneeded = #{iDBVersionChangeEvent.oldVersion} => #{iDBVersionChangeEvent.newVersion}") if (!@nolog)
       @launchMigrationPath(iDBVersionChangeEvent.oldVersion)
 
   close: () ->
     if @db? then @db.close()
 
   # Performs all the migrations to reach the right version of the database.
-  migrate: (migrations, version, options) ->
-    debugLog("Starting migrations from ", version) unless @nolog
+  migrate: (migrations, version, options) =>
+    @logger("Starting migrations from ", version)
     @_migrate_next(migrations, version, options)
 
   # Performs the next migrations. This method is private and should probably not be called.
-  _migrate_next: (migrations, version, options) ->
-    debugLog("_migrate_next begin version from #" + version) unless @nolog
+  _migrate_next: (migrations, version, options) =>
+    @logger("_migrate_next begin version from #" + version)
     that = this
     migration = migrations.shift()
     if (migration)
@@ -80,46 +88,46 @@ class window.Driver
           migration.after = (next) ->
             next()
         # First, let's run the before script
-        debugLog("_migrate_next begin before version #" + migration.version) unless @nolog
+        @logger("_migrate_next begin before version #" + migration.version)
         migration.before () =>
-          debugLog("_migrate_next done before version #" + migration.version) unless @nolog
+          @logger("_migrate_next done before version #" + migration.version)
 
           continueMigration = (e) =>
-            debugLog("_migrate_next continueMigration version #" + migration.version) unless @nolog
+            @logger("_migrate_next continueMigration version #" + migration.version)
 
             transaction = @dbRequest.transaction || versionRequest.result
-            debugLog("_migrate_next begin migrate version #" + migration.version) unless @nolog
+            @logger("_migrate_next begin migrate version #" + migration.version)
 
             migration.migrate transaction, () =>
-              debugLog("_migrate_next done migrate version #" + migration.version) unless @nolog
+              @logger("_migrate_next done migrate version #" + migration.version)
               # Migration successfully appliedn let's go to the next one!
-              debugLog("_migrate_next begin after version #" + migration.version) unless @nolog
+              @logger("_migrate_next begin after version #" + migration.version)
               migration.after () =>
-                debugLog("_migrate_next done after version #" + migration.version) unless @nolog
-                debugLog("Migrated to " + migration.version) unless @nolog
+                @logger("_migrate_next done after version #" + migration.version)
+                @logger("Migrated to " + migration.version)
 
                 #last modification occurred, need finish
                 if (migrations.length == 0)
                   # if @supportOnUpgradeNeeded
-                  #   debugLog("Done migrating") unless @nolog
+                  #   @logger("Done migrating")
                   #   # No more migration
                   #   options.success()
                   # else
-                    debugLog("_migrate_next setting transaction.oncomplete to finish  version #" + migration.version) unless @nolog
+                    @logger("_migrate_next setting transaction.oncomplete to finish  version #" + migration.version)
                     transaction.oncomplete = () =>
-                      debugLog("_migrate_next done transaction.oncomplete version #" + migration.version) unless @nolog
+                      @logger("_migrate_next done transaction.oncomplete version #" + migration.version)
 
-                      debugLog("Done migrating") unless @nolog
+                      @logger("Done migrating")
                       # No more migration
                       options.success()
                 else
-                  debugLog("_migrate_next setting transaction.oncomplete to recursive _migrate_next  version #" + migration.version) unless @nolog
+                  @logger("_migrate_next setting transaction.oncomplete to recursive _migrate_next  version #" + migration.version)
                   transaction.oncomplete = () =>
-                    debugLog("_migrate_next end from version #" + version + " to " + migration.version) unless @nolog
+                    @logger("_migrate_next end from version #" + version + " to " + migration.version)
                     that._migrate_next(migrations, version, options)
 
           if !@supportOnUpgradeNeeded
-            debugLog("_migrate_next begin setVersion version #" + migration.version) unless @nolog
+            @logger("_migrate_next begin setVersion version #" + migration.version)
             versionRequest = @db.setVersion(migration.version)
             versionRequest.onsuccess = continueMigration
             versionRequest.onerror = options.error
@@ -127,6 +135,6 @@ class window.Driver
             continueMigration()
       else
         # No need to apply this migration
-        debugLog("Skipping migration " + migration.version) unless @nolog
+        @logger("Skipping migration " + migration.version)
         @_migrate_next(migrations, version, options)
 

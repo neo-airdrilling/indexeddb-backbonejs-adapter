@@ -6,13 +6,6 @@ window.S4 = ->
 window.guid = ->
   (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4())
 
-
-window.debugLog = ->
-  if typeof window != "undefined" && typeof window.console != "undefined" && typeof window.console.log != "undefined"
-    window.console.log.apply window.console, arguments
-  else if console.log != "undefined"
-    console.log.apply console, arguments
-
 if typeof exports != 'undefined'
   window._ = require('underscore')
   window.Backbone = require('backbone')

@@ -33,7 +33,6 @@ if (typeof exports == 'undefined')
   Backbone.sync = sync
 else
   exports.sync = sync
-  exports.debugLog = debugLog
 
 # window.addEventListener "unload", () ->
 #   Backbone.sync("closeall")
