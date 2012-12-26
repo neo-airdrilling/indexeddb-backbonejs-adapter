@@ -1,0 +1,13 @@
+pairs:
+  dg: Diego Garcia
+  zi: Zi
+  dkm: Dom Kiva-Meyer
+  as: Abhaya Shenoy
+  wt: Winston Teo
+  ay: Alan Yeo
+  ts: Tommy Sullivan
+
+email:
+  prefix: pair
+  domain: neo.com
+  no_solo_prefix: true
