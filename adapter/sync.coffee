@@ -3,9 +3,10 @@
 # The wrapper keeps an active Executuon Queue for each "schema", and executes querues agains it, based on the object type (collection or
 # single model), but also the method... etc.
 # Keeps track of the connections
-Databases = {}
+IndexedDBBackbone.Databases = {}
 
-sync = (method, object, options) ->
+IndexedDBBackbone.sync = (method, object, options) ->
+  Databases = IndexedDBBackbone.Databases
 
   if (method=="closeall")
     _.each Databases, (database) ->
@@ -24,15 +25,15 @@ sync = (method, object, options) ->
     Databases[schema.id].execute([method, object, options])
 
   if (!Databases[schema.id])
-    Databases[schema.id] = new ExecutionQueue(schema,next,schema.nolog)
+    Databases[schema.id] = new IndexedDBBackbone.ExecutionQueue(schema,next,schema.nolog)
   else
     next()
 
 if (typeof exports == 'undefined')
   Backbone.ajaxSync = Backbone.sync
-  Backbone.sync = sync
+  Backbone.sync = IndexedDBBackbone.sync
 else
-  exports.sync = sync
+  exports.sync = IndexedDBBackbone.sync
 
 # window.addEventListener "unload", () ->
 #   Backbone.sync("closeall")

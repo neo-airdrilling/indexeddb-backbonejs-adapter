@@ -1,16 +1,14 @@
 # ExecutionQueue object
 # The execution queue is an abstraction to buffer up requests to the database.
 # It holds a "driver". When the driver is ready, it just fires up the queue and executes in sync.
-class window.ExecutionQueue
+class IndexedDBBackbone.ExecutionQueue
   constructor: (schema,next,nolog) ->
-    @driver   = new Driver(schema, @ready.bind(@), nolog)
+    @driver   = new IndexedDBBackbone.Driver(schema, @ready.bind(@), nolog)
     @started  = false
     @stack    = []
     @version  = _.last(schema.migrations).version
     @next = next
 
-# ExecutionQueue Prototype
-window.ExecutionQueue.prototype = _.extend(window.ExecutionQueue.prototype, {
   # Called when the driver is ready
   # It just loops over the elements in the queue and executes them.
   ready: () ->
@@ -28,4 +26,4 @@ window.ExecutionQueue.prototype = _.extend(window.ExecutionQueue.prototype, {
 
   close : () ->
     @driver.close()
-})
+

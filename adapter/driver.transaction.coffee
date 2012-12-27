@@ -1,4 +1,4 @@
-class window.Driver extends window.Driver
+class IndexedDBBackbone.Driver extends IndexedDBBackbone.Driver
   # Tracks transactions. Mostly for debugging purposes. TO-IMPROVE
   _track_transaction: (transaction) ->
     @transactions.push(transaction)
@@ -16,22 +16,22 @@ class window.Driver extends window.Driver
     switch method
       when "create"
         transaction = @db.transaction([storeName], 'readwrite')
-        request = new Driver.AddRequest(transaction, storeName, object.toJSON(), options)
+        request = new IndexedDBBackbone.Driver.AddRequest(transaction, storeName, object.toJSON(), options)
       when "read"
         if object.id || object.cid
           transaction = @db.transaction([storeName], "readonly")
-          request = new Driver.GetRequest(transaction, storeName, object.toJSON(), options)
+          request = new IndexedDBBackbone.Driver.GetRequest(transaction, storeName, object.toJSON(), options)
         else
           @query(storeName, object, options) # It's a collection
       when "update" # We may want to check that this is not a collection. TOFIX
         transaction = @db.transaction([storeName], 'readwrite')
-        request = new Driver.PutRequest(transaction, storeName, object.toJSON(), options)
+        request = new IndexedDBBackbone.Driver.PutRequest(transaction, storeName, object.toJSON(), options)
       when "delete"
         transaction = @db.transaction([storeName], 'readwrite')
         if object.id || object.cid
-          request = new Driver.DeleteRequest(transaction, storeName, object.toJSON(), options)
+          request = new IndexedDBBackbone.Driver.DeleteRequest(transaction, storeName, object.toJSON(), options)
         else
-          request = new Driver.ClearRequest(transaction, storeName, object.toJSON(), options)
+          request = new IndexedDBBackbone.Driver.ClearRequest(transaction, storeName, object.toJSON(), options)
       else
         @logger "Unknown method", method, "is called for", object
     request.execute() if request
@@ -64,27 +64,27 @@ class window.Driver extends window.Driver
           if (options.conditions[index.keyPath] instanceof Array)
             lower = if options.conditions[index.keyPath][0] > options.conditions[index.keyPath][1] then options.conditions[index.keyPath][1] else options.conditions[index.keyPath][0]
             upper = if options.conditions[index.keyPath][0] > options.conditions[index.keyPath][1] then options.conditions[index.keyPath][0] else options.conditions[index.keyPath][1]
-            bounds = IDBKeyRange.bound(lower, upper, true, true)
+            bounds = IndexedDBBackbone.IDBKeyRange.bound(lower, upper, true, true)
 
             if (options.conditions[index.keyPath][0] > options.conditions[index.keyPath][1])
               # Looks like we want the DESC order
-              readCursor = index.openCursor(bounds, window.IDBCursor.PREV || "prev")
+              readCursor = index.openCursor(bounds, IndexedDBBackbone.IDBCursor.PREV || "prev")
             else
               # We want ASC order
-              readCursor = index.openCursor(bounds, window.IDBCursor.NEXT || "next")
+              readCursor = index.openCursor(bounds, IndexedDBBackbone.IDBCursor.NEXT || "next")
           else if (options.conditions[index.keyPath] != undefined)
-            bounds = IDBKeyRange.only(options.conditions[index.keyPath])
+            bounds = IndexedDBBackbone.IDBKeyRange.only(options.conditions[index.keyPath])
             readCursor = index.openCursor(bounds)
     else
       # No conditions, use the index
       if (options.range)
         lower = if options.range[0] > options.range[1] then options.range[1] else options.range[0]
         upper = if options.range[0] > options.range[1] then options.range[0] else options.range[1]
-        bounds = IDBKeyRange.bound(lower, upper)
+        bounds = IndexedDBBackbone.IDBKeyRange.bound(lower, upper)
         if (options.range[0] > options.range[1])
-          readCursor = store.openCursor(bounds, window.IDBCursor.PREV || "prev")
+          readCursor = store.openCursor(bounds, IndexedDBBackbone.IDBCursor.PREV || "prev")
         else
-          readCursor = store.openCursor(bounds, window.IDBCursor.NEXT || "next")
+          readCursor = store.openCursor(bounds, IndexedDBBackbone.IDBCursor.NEXT || "next")
       else
         readCursor = store.openCursor()
 

@@ -84,7 +84,7 @@
         function deleteDB(dbObj) {
             try {
 
-                var indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.msIndexedDB ;
+                var indexedDB = IndexedDBBackbone.indexedDB
 
                 var dbreq = indexedDB.deleteDatabase(dbObj.id);
                 dbreq.onsuccess = function (event) {
@@ -761,7 +761,7 @@
         
         
         // First, let's see the content of the database... because I'm little worried about it!
-        // var indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB;
+        // var indexedDB = IndexedDBBackbone.indexedDB
         // var IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction; // No prefix in moz
         // 
         // var dbRequest = indexedDB.open(database.id, "");

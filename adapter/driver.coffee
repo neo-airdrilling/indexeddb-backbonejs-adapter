@@ -1,4 +1,4 @@
-class window.Driver
+class IndexedDBBackbone.Driver
   constructor: (schema, ready, nolog) ->
     @schema = schema
     @ready = ready
@@ -28,7 +28,7 @@ class window.Driver
       }
 
     @logger "opening database", schema.id, "in version #", @lastMigrationPathVersion
-    @dbRequest = indexedDB.open(schema.id, @lastMigrationPathVersion) # schema version need to be an unsigned long
+    @dbRequest = IndexedDBBackbone.indexedDB.open(schema.id, @lastMigrationPathVersion) # schema version need to be an unsigned long
 
     @dbRequest.onblocked = (e) =>
       @logger("blocked")
