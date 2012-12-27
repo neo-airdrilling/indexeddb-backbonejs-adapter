@@ -6,27 +6,29 @@ class IndexedDBBackbone.Driver.Request
     @store = transaction.objectStore(storeName)
 
   execute: ->
-    request = @run()
-    @bindCallbacks(request)
 
-  bindCallbacks: (request) ->
+class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Request
+  execute: ->
+    if (@objectJSON.id == undefined) then @objectJSON.id = guid()
+    if (@objectJSON.id == null) then delete @objectJSON.id
+
+    request = if @store.keyPath then @store.add(@objectJSON) else @store.add(@objectJSON, @objectJSON.id)
+
     request.onerror = (e) =>
       @options.error(e)
     request.onsuccess = (e) =>
       @options.success(@objectJSON)
 
-class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Request
-  run: ->
-    if (@objectJSON.id == undefined) then @objectJSON.id = guid()
-    if (@objectJSON.id == null) then delete @objectJSON.id
-
-    if @store.keyPath then @store.add(@objectJSON) else @store.add(@objectJSON, @objectJSON.id)
-
 class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Request
-  run: ->
+  execute: ->
     @objectJSON.id = guid() unless @objectJSON.id?
 
-    if @store.keyPath then @store.put(@objectJSON) else @store.put(@objectJSON, @objectJSON.id)
+    request = if @store.keyPath then @store.put(@objectJSON) else @store.put(@objectJSON, @objectJSON.id)
+
+    request.onerror = (e) =>
+      @options.error(e)
+    request.onsuccess = (e) =>
+      @options.success(@objectJSON)
 
 class IndexedDBBackbone.Driver.DeleteRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
