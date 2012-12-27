@@ -9,7 +9,7 @@ class IndexedDBBackbone.Driver.Request
 
 class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
-    if (@objectJSON.id == undefined) then @objectJSON.id = guid()
+    if (@objectJSON.id == undefined) then @objectJSON.id = IndexedDBBackbone.guid()
     if (@objectJSON.id == null) then delete @objectJSON.id
 
     request = if @store.keyPath then @store.add(@objectJSON) else @store.add(@objectJSON, @objectJSON.id)
@@ -21,7 +21,7 @@ class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Reque
 
 class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
-    @objectJSON.id = guid() unless @objectJSON.id?
+    @objectJSON.id = IndexedDBBackbone.guid() unless @objectJSON.id?
 
     request = if @store.keyPath then @store.put(@objectJSON) else @store.put(@objectJSON, @objectJSON.id)
 

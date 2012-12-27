@@ -5,7 +5,7 @@ window.IndexedDBBackbone =
 
   # Generate a pseudo-GUID by concatenating random hexadecimal.
   guid: ->
-    (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4())
+    (@S4() + @S4() + "-" + @S4() + "-" + @S4() + "-" + @S4() + "-" + @S4() + @S4() + @S4())
 
 if typeof exports != 'undefined'
   window._ = require('underscore')
