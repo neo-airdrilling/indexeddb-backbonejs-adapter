@@ -37,7 +37,7 @@ class window.Driver
       @db = e.target.result # Attach the connection ot the queue.
       if !@supportOnUpgradeNeeded
         currentIntDBVersion = (parseInt(@db.version, 10) ||  0) # we need convert beacuse chrome store in integer and ie10 DP4+ in int
-        lastMigrationInt = (parseInt(lastMigrationPathVersion, 10) || 0)  # And make sure we compare numbers with numbers.
+        lastMigrationInt = (parseInt(@lastMigrationPathVersion, 10) || 0)  # And make sure we compare numbers with numbers.
 
         if (currentIntDBVersion == lastMigrationInt) # if support new event onupgradeneeded will trigger the ready function
           # No migration to perform!
