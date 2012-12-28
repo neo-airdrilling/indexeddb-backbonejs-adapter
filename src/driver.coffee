@@ -122,9 +122,13 @@ class IndexedDBBackbone.Driver
                       options.success()
                 else
                   @logger("_migrate_next setting transaction.oncomplete to recursive _migrate_next  version #" + migration.version)
-                  transaction.oncomplete = () =>
+                  if @supportOnUpgradeNeeded
                     @logger("_migrate_next end from version #" + version + " to " + migration.version)
                     that._migrate_next(migrations, version, options)
+                  else
+                    transaction.oncomplete = () =>
+                      @logger("_migrate_next end from version #" + version + " to " + migration.version)
+                      that._migrate_next(migrations, version, options)
 
           if !@supportOnUpgradeNeeded
             @logger("_migrate_next begin setVersion version #" + migration.version)
