@@ -42,7 +42,7 @@ describe "indexdb backbone driver", ->
 
   it "read model with id", ->
     asyncTest ->
-      movie = new Movie() ->
+      movie = new Movie()
       movie.save
         title: "Avatar"
         format: "blue-ray"
