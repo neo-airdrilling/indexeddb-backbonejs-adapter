@@ -8,7 +8,7 @@ class IndexedDBBackbone.Driver
     @nolog = nolog
 
     @logger = ->
-      if nolog
+      unless @nolog
         if window?.console?.log?
           window.console.log.apply window.console, arguments
         else if console?.log?
