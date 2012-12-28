@@ -63,6 +63,7 @@ window.Theater = Backbone.Collection.extend({
 window.testDone = -> window.asyncTestDone = true
 
 window.asyncTest = (test) ->
+  window.asyncTestDone = false
   runs test
   waitsFor (-> window.asyncTestDone), "test to finish", 500
 
