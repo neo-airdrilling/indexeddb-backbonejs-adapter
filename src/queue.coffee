@@ -12,6 +12,7 @@ class IndexedDBBackbone.ExecutionQueue
   # Called when the driver is ready
   # It just loops over the elements in the queue and executes them.
   ready: () ->
+    @version = @driver.db.version
     @started = true
     _.each @stack, (message) =>
       @execute(message)
