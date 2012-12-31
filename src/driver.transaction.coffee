@@ -11,7 +11,7 @@ class IndexedDBBackbone.Driver extends IndexedDBBackbone.Driver
     transaction.onerror = removeIt
 
   # This is the main method, called by the ExecutionQueue when the driver is ready (database open and migration performed)
-  execute: (storeName, method, object, options) ->
+  _execute: (storeName, method, object, options) ->
     @logger("execute : " + method +  " on " + storeName + " for " + object.id)
     switch method
       when "create"

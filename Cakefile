@@ -9,7 +9,6 @@ sources = [
   'src/driver.coffee',
   'src/driver.request.coffee',
   'src/driver.transaction.coffee',
-  'src/queue.coffee',
   'src/sync.coffee',
   'src/schema.coffee'
 ]

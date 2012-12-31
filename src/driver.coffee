@@ -1,11 +1,10 @@
 class IndexedDBBackbone.Driver
-  constructor: (schema, ready, nolog) ->
-    @schema = schema
-    @ready = ready
+  constructor: (@schema, @nolog) ->
     @error = null
     @transactions = [] # Used to list all transactions and keep track of active ones.
     @db = null
-    @nolog = nolog
+    @stack = []
+    @state = 'closed'
 
     @logger = ->
       unless @nolog
@@ -14,17 +13,24 @@ class IndexedDBBackbone.Driver
         else if console?.log?
           console.log apply console, arguments
 
-    version = schema.version()
+    @open()
 
-    @logger "opening database", schema.id, "in version #", version
-    dbRequest = IndexedDBBackbone.indexedDB.open(schema.id, version)
+  open: ->
+    name = @schema.id
+    version = @schema.version()
+
+    @logger "opening database", name, "in version #", version
+    @state = 'opening'
+
+    dbRequest = IndexedDBBackbone.indexedDB.open(name, version)
     dbRequest.onupgradeneeded = (e) =>
       @logger("onupgradeneeded = #{e.oldVersion} => #{e.newVersion}")
       @schema.onupgradeneeded(e)
 
     dbRequest.onsuccess = (e) =>
-     @db = e.target.result
-     @ready()
+      @db = e.target.result
+      @state = 'open'
+      @ready()
 
     dbRequest.onblocked = (e) => @logger("blocked")
     dbRequest.onerror = (e) => @logger("Couldn't not connect to the database")
@@ -32,6 +38,21 @@ class IndexedDBBackbone.Driver
 
   close: () ->
     if @db?
+      @state = 'closed'
       @db.close()
       @db = null
+
+  ready: () ->
+    while args = @stack.shift()
+      @_execute args...
+
+  execute: () ->
+    switch @state
+      when 'closed'
+        @open()
+        @stack.push arguments
+      when 'opening'
+        @stack.push arguments
+      when 'open'
+        @_execute arguments...
 
