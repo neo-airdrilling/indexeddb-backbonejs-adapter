@@ -21,13 +21,8 @@ IndexedDBBackbone.sync = (method, object, options) ->
       Databases[schema.id].close()
       delete Databases[schema.id]
 
-  next = () ->
-    Databases[schema.id].execute([method, object, options])
-
-  if (!Databases[schema.id])
-    Databases[schema.id] = new IndexedDBBackbone.ExecutionQueue(schema,next,schema.nolog)
-  else
-    next()
+  Databases[schema.id] ||= new IndexedDBBackbone.ExecutionQueue(schema, schema.nolog)
+  Databases[schema.id].execute([method, object, options])
 
 if (typeof exports == 'undefined')
   Backbone.ajaxSync = Backbone.sync
