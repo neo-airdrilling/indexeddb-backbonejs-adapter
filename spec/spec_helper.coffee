@@ -1,5 +1,4 @@
 # databases
-
 DBNAME = "movies-database"
 
 IndexedDBBackbone.describe(DBNAME)
@@ -9,25 +8,23 @@ IndexedDBBackbone.describe(DBNAME)
   .createStore('torrents', keyPath: 'id')
 
 # Models
-class window.Moviev1 extends Backbone.Model
+class window.Movie extends Backbone.Model
   database: DBNAME
   storeName: "movies"
 
-window.Movie = Backbone.Model.extend({
-  database: DBNAME
-  storeName: "movies"
-})
-
-window.Torrent = Backbone.Model.extend({
+class window.Torrent extends Backbone.Model
   database: DBNAME
   storeName: "torrents"
-})
 
-window.Theater = Backbone.Collection.extend({
+class window.Theater extends Backbone.Collection
   database: DBNAME
   storeName: "movies"
   model: Movie
-})
+
+class window.PirateBay extends Backbone.Collection
+  database: DBNAME
+  storeName: "torrents"
+  model: Torrent
 
 window.testDone = -> window.asyncTestDone = true
 

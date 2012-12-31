@@ -9,24 +9,56 @@ IndexedDBBackbone._schemas = {}
 IndexedDBBackbone.describe = (dbName) ->
   IndexedDBBackbone._schemas[dbName] = IDBSchema.describe(dbName)
 
-IndexedDBBackbone.sync = (method, object, options) ->
+IndexedDBBackbone._getDriver = (databaseName) ->
   Databases = IndexedDBBackbone.Databases
-
-  if (method=="closeall")
-    _.each Databases, (database) ->
-      database.close()
-    # Clean up active databases object.
-    Databases = {}
-    return
-
-  schema = IndexedDBBackbone._schemas[object.database]
+  schema = IndexedDBBackbone._schemas[databaseName]
   if (Databases[schema.id])
-    if (Databases[schema.id].version != _.last(schema.migrations).version)
+    if (Databases[schema.id].version < schema.version()) #TODO: spec it up
       Databases[schema.id].close()
       delete Databases[schema.id]
 
   Databases[schema.id] ||= new IndexedDBBackbone.Driver(schema, schema.nolog)
-  Databases[schema.id].execute object.storeName, method, object, options
+
+IndexedDBBackbone.sync = (method, object, options) ->
+  switch method
+    when "closeall"
+      _.each IndexedDBBackbone.Databases, (database) ->
+        database.close()
+      # Clean up active databases object.
+      IndexedDBBackbone.Databases = {}
+
+    when "begin"
+      if object instanceof Array
+        objects = object
+      else
+        objects = [object]
+
+      dbName = objects[0].database
+      storeNames = _.chain(objects).map((obj) -> obj.storeName).uniq().value()
+      console.log storeNames
+
+      IndexedDBBackbone._getDriver(dbName).execute storeNames, 'begin'
+
+    when "commit"
+      if object instanceof Array
+        objects = object
+      else
+        objects = [object]
+
+      dbName = objects[0].database
+      IndexedDBBackbone._getDriver(dbName).execute null, 'commit'
+
+    when "abort"
+      if object instanceof Array
+        objects = object
+      else
+        objects = [object]
+
+      dbName = objects[0].database
+      IndexedDBBackbone._getDriver(dbName).execute null, 'abort'
+
+    else
+      IndexedDBBackbone._getDriver(object.database).execute object.storeName, method, object, options
 
 if (typeof exports == 'undefined')
   Backbone.ajaxSync = Backbone.sync

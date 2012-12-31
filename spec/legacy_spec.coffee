@@ -1,7 +1,7 @@
 describe "indexdb backbone driver", ->
   it "creates model v1", ->
     asyncTest ->
-      movie = new Moviev1()
+      movie = new Movie()
       movie.save
          title: "The Matrix",
          format: "dvd"

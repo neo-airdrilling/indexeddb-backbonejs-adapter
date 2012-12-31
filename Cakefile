@@ -10,7 +10,8 @@ sources = [
   'src/driver.request.coffee',
   'src/driver.transaction.coffee',
   'src/sync.coffee',
-  'src/schema.coffee'
+  'src/schema.coffee',
+  'src/transaction.coffee'
 ]
 
 build = (options, callback) ->

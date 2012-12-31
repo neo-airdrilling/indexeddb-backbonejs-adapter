@@ -5,6 +5,7 @@ class IndexedDBBackbone.Driver
     @db = null
     @stack = []
     @state = 'closed'
+    @_transaction = null
 
     @logger = ->
       unless @nolog
