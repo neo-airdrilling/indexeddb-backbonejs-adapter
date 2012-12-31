@@ -12,7 +12,7 @@ describe 'IDBSchema', ->
     it "should initialize a new schema object", ->
       expect(schema.id).toEqual(DB_NAME)
 
-  describe 'migrate', ->
+  describe '#migrate', ->
     it 'creates migrations', ->
       schema.migrate ->
         @
@@ -42,7 +42,7 @@ describe 'IDBSchema', ->
           db.close()
           testDone()
 
-  describe 'createStore', ->
+  describe '#createStore', ->
     beforeEach ->
       schema.createStore('movies')
 
@@ -73,7 +73,7 @@ describe 'IDBSchema', ->
         expect(books.keyPath).toEqual('ISDN')
         expect(books.autoIncrement).toBeFalsy()
 
-  describe 'deleteStore', ->
+  describe '#deleteStore', ->
     it 'should delete the store when the migration is run', ->
       schema.createStore('movies').createStore('music').deleteStore('movies')
 
@@ -87,7 +87,7 @@ describe 'IDBSchema', ->
         expect(db.objectStoreNames.length).toEqual 1
         expect(db.objectStoreNames[0]).toEqual('movies')
 
-  describe 'createIndex', ->
+  describe '#createIndex', ->
     it 'should create index for the store when the migration is run', ->
       schema.createStore('movies').createIndex('movies', 'actorsIndex', 'actors.name')
 
@@ -122,7 +122,7 @@ describe 'IDBSchema', ->
         expect(index.multiEntry).toBeFalsy()
         expect(index.unique).toBeTruthy()
 
-  describe 'deleteIndex', ->
+  describe '#deleteIndex', ->
     it 'should delete the index for the store when the migration is run', ->
       schema.createStore('movies')
         .createIndex('movies', 'actorsIndex', 'actors.name')
@@ -135,7 +135,7 @@ describe 'IDBSchema', ->
         expect(store.indexNames.length).toEqual 1
         expect(store.indexNames[0]).toEqual 'otherIndex'
 
-  describe 'onupgradeneeded', ->
+  describe '#onupgradeneeded', ->
     it 'applies the necessary migrations', ->
       asyncTest ->
         idb = IndexedDBBackbone.indexedDB
@@ -167,4 +167,12 @@ describe 'IDBSchema', ->
               expect(db.objectStoreNames[0]).toEqual 'music'
               db.close()
               testDone()
+
+  describe '#version', ->
+    it 'returns the schema version', ->
+      expect(schema.version()).toEqual 0
+      schema.createStore('foo')
+      expect(schema.version()).toEqual 1
+      schema.createStore('bar')
+      expect(schema.version()).toEqual 2
 

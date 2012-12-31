@@ -32,5 +32,8 @@ class IDBSchema
     transaction = e.target.transaction
     migration(transaction) for migration in @migrations[e.oldVersion...e.newVersion]
 
+  version: ->
+    @migrations.length
+
 window.IDBSchema = IDBSchema
 
