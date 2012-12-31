@@ -38,10 +38,3 @@ task 'watch', 'Continously compile gen/ from src/', ->
   build join: 'indexeddb-backbone.js', output: 'gen', sources: sources, watch: true
   build output: 'gen/spec', sources: ['spec'], watch: true
 
-task 'lib', 'Compile monolithic library file', ->
-  invoke 'compile'
-  build([
-    'gen/helpers.js'
-  ])
-
-
