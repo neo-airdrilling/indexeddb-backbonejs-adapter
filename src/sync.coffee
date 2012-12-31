@@ -4,6 +4,10 @@
 # single model), but also the method... etc.
 # Keeps track of the connections
 IndexedDBBackbone.Databases = {}
+IndexedDBBackbone._schemas = {}
+
+IndexedDBBackbone.describe = (dbName) ->
+  IndexedDBBackbone._schemas[dbName] = IDBSchema.describe(dbName)
 
 IndexedDBBackbone.sync = (method, object, options) ->
   Databases = IndexedDBBackbone.Databases
@@ -15,7 +19,7 @@ IndexedDBBackbone.sync = (method, object, options) ->
     Databases = {}
     return
 
-  schema = object.database
+  schema = IndexedDBBackbone._schemas[object.database]
   if (Databases[schema.id])
     if (Databases[schema.id].version != _.last(schema.migrations).version)
       Databases[schema.id].close()

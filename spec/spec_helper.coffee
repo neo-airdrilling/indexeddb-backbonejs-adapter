@@ -1,61 +1,30 @@
 # databases
-databasev1 = {
-  id: "movies-database"
-  description: "The database for the Movies"
-  migrations: [{
-    version: 1
-    migrate: (transaction, next) ->
-      store = transaction.db.createObjectStore("movies")
-      next()
-  }]
-}
 
-databasev2 = $.extend(true, {}, databasev1)
-databasev2.migrations.push(
-  {
-    version: 2
-    migrate: (transaction, next) ->
-      store = undefined
-      if(!transaction.db.objectStoreNames.contains("movies"))
-        store = transaction.db.createObjectStore("movies")
-      store = transaction.objectStore("movies")
-      store.createIndex("titleIndex", "title", {
-        unique: false
-      })
-      store.createIndex("formatIndex", "format", {
-        unique: false
-      })
-      next()
-  }
-)
+DBNAME = "movies-database"
 
-databasev3 = $.extend(true, {}, databasev2)
-databasev3.migrations.push(
-  {
-    version: 3
-    migrate: (transaction, next) ->
-      store = transaction.db.createObjectStore("torrents", {keyPath: "id"})
-      next()
-  }
-)
+IndexedDBBackbone.describe(DBNAME)
+  .createStore('movies')
+  .createIndex('movies', 'titleIndex', 'title', unique: false)
+  .createIndex('movies', 'formatIndex', 'format', unique: false)
+  .createStore('torrents', keyPath: 'id')
 
 # Models
 class window.Moviev1 extends Backbone.Model
-  database: databasev1
+  database: DBNAME
   storeName: "movies"
 
 window.Movie = Backbone.Model.extend({
-  database: databasev2
+  database: DBNAME
   storeName: "movies"
 })
 
 window.Torrent = Backbone.Model.extend({
-  database: databasev3
+  database: DBNAME
   storeName: "torrents"
 })
 
 window.Theater = Backbone.Collection.extend({
-  database: databasev2
+  database: DBNAME
   storeName: "movies"
   model: Movie
 })
@@ -70,13 +39,13 @@ window.asyncTest = (test) ->
 beforeEach ->
   window.asyncTestDone = false
 
-window.deleteDB = (dbObj) ->
+window.deleteDB = (dbName) ->
   try
     indexedDB = IndexedDBBackbone.indexedDB
-    dbreq = indexedDB.deleteDatabase(dbObj.id)
+    dbreq = indexedDB.deleteDatabase(dbName)
     dbreq.onsuccess = (event) ->
       db = event.result
-      console.log "indexedDB: " + dbObj.id + " deleted"
+      console.log "indexedDB: " + dbName + " deleted"
 
     dbreq.onerror = (event) ->
       console.error "indexedDB.delete Error: " + event.message
@@ -84,10 +53,10 @@ window.deleteDB = (dbObj) ->
     console.error "Error: " + e.message
 
     #prefer change id of database to start ont new instance
-    dbObj.id = dbObj.id + "." + IndexedDBBackbone.guid()
-    console.log "fallback to new database name :" + dbObj.id
+    dbName = dbName + "." + IndexedDBBackbone.guid()
+    console.log "fallback to new database name :" + dbName
 
-deleteDB(databasev2)
+deleteDB(DBNAME)
 
 window.fail = (msg) ->
   expect(true).toEqual(false)
