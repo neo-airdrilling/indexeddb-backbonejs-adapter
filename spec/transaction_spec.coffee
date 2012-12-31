@@ -27,7 +27,6 @@ describe "Backbone.transaction", ->
 
           torrents.fetch
             success: (e) ->
-              console.debug 'gonna fail here', torrents.toArray()
               expect(torrents.length).toEqual 1
               testDone()
 
