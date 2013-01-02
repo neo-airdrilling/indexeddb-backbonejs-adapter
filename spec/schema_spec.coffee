@@ -1,6 +1,7 @@
 DB_NAME = 'movies-db'
+IDBSchema = IndexedDBBackbone.IDBSchema
+indexedDB = IndexedDBBackbone.indexedDB
 db = undefined
-indexedDB = window.webkitIndexedDB
 
 describe 'IDBSchema', ->
   schema = undefined

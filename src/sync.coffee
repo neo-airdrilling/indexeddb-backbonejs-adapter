@@ -7,7 +7,7 @@ IndexedDBBackbone.Databases = {}
 IndexedDBBackbone._schemas = {}
 
 IndexedDBBackbone.describe = (dbName) ->
-  IndexedDBBackbone._schemas[dbName] = IDBSchema.describe(dbName)
+  IndexedDBBackbone._schemas[dbName] = IndexedDBBackbone.IDBSchema.describe(dbName)
 
 IndexedDBBackbone._getDriver = (databaseName) ->
   Databases = IndexedDBBackbone.Databases

@@ -1,8 +1,8 @@
-class IDBSchema
+class IndexedDBBackbone.IDBSchema
   _logChannel: false
 
   @describe: (id) ->
-    return new IDBSchema(id)
+    return new @(id)
 
   constructor: (@id) ->
     @migrations = []
@@ -41,6 +41,4 @@ class IDBSchema
       @_logChannel = value
     else
       @_logChannel
-
-window.IDBSchema = IDBSchema
 
