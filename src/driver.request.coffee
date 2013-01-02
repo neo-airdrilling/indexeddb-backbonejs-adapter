@@ -42,21 +42,21 @@ class IndexedDBBackbone.Driver.ClearRequest extends IndexedDBBackbone.Driver.Req
 
 class IndexedDBBackbone.Driver.GetRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
-    if (@objectJSON.id)
+    if @objectJSON.id
       getRequest = @store.get(@objectJSON.id)
-    else
-      _.each @store.indexNames, (key, index) =>
-        index = @store.index(key)
-        if @objectJSON[index.keyPath] # FIXME: Doesn't work with nested paths. e.g. "foo.bar"
-          getRequest = index.get(@objectJSON[index.keyPath])
+    else if indexName = @options.indexName
+      index = @store.index(indexName)
+      keyPath = index.keyPath
+      value = _.reduce keyPath.split('.'), ((obj, key) -> obj?[key]), @objectJSON
+      getRequest = index.get(value) if value
 
     if (getRequest)
       getRequest.onsuccess = (e) =>
-        if (e.target.result) # TODO: handle many results on non-unique index?
+        if (e.target.result)
           @options.success?(e.target.result)
         else
-          @options.error?("Not Found") # TODO: when does this happen...
-      getRequest.onerror = @options.error # ...as opposed to this?
+          @options.error?("Not Found")
+      getRequest.onerror = @options.error
     else
       @options.error?("Couldn't search: no index matches the provided model data")
 

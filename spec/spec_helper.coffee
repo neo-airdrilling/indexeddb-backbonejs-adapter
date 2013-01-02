@@ -5,6 +5,7 @@ IndexedDBBackbone.describe(DBNAME)
   .createStore('movies')
   .createIndex('movies', 'titleIndex', 'title', unique: false)
   .createIndex('movies', 'formatIndex', 'format', unique: false)
+  .createIndex('movies', 'releaseIndex', 'release.year', unique: false)
   .createStore('torrents', keyPath: 'id')
 
 # Models

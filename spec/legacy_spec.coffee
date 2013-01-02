@@ -45,16 +45,16 @@ describe "indexdb backbone driver", ->
       movie = new Movie()
       movie.save
         title: "Avatar"
-        format: "blue-ray"
+        format: "laserdisc"
       ,
         success: ->
           saved = new Movie(id: movie.id)
           saved.fetch
             success: (object) ->
               expect(saved.toJSON().title).toEqual("Avatar")
-              expect(saved.toJSON().format).toEqual("blue-ray")
+              expect(saved.toJSON().format).toEqual("laserdisc")
               expect(object.toJSON().title).toEqual("Avatar")
-              expect(object.toJSON().format).toEqual("blue-ray")
+              expect(object.toJSON().format).toEqual("laserdisc")
               testDone()
 
             error: (object, error) -> fail(error.toString())
@@ -63,33 +63,43 @@ describe "indexdb backbone driver", ->
 
   it "read model with index", ->
     asyncTest ->
-      saveMovieAndReadWithIndex = (movie) ->
-        movie.save {},
-          success: ->
-            movie2 = new Movie(title: "Avatar")
-            movie2.fetch
-              success: (object) ->
-                expect(movie2.toJSON().title).toEqual(movie.toJSON().title)
-                expect(movie2.toJSON().format).toEqual(movie.toJSON().format)
-                testDone()
-
-              error: (object, error) -> fail(error.toString())
-
-          error: (object, error) -> fail(error.toString())
-
       movie = new Movie(title: "Avatar")
-      movie.fetch
+      movie.save {},
         success: ->
-          movie.destroy success: ->
-            saveMovieAndReadWithIndex movie
+          movie2 = new Movie(title: "Avatar")
+          movie2.fetch
+            indexName: 'titleIndex'
+            success: (object) ->
+              expect(movie2.get('title')).toEqual "Avatar"
+              expect(object.get('title')).toEqual "Avatar"
+              testDone()
 
-        error: ->
-          saveMovieAndReadWithIndex movie
+            error: (object, error) -> fail(error.toString())
+
+        error: (object, error) -> fail(error.toString())
+
+  it "read model with nested key paths", ->
+    asyncTest ->
+      movie = new Movie(title: "Avatar", release: { location: 'USA', year: 2010 })
+      movie.save {},
+        success: ->
+          movie2 = new Movie(release: { year: 2010 })
+          movie2.fetch
+            indexName: 'releaseIndex'
+            success: (object) ->
+              expect(movie2.get('release').year).toEqual 2010
+              expect(object.get('release').year).toEqual 2010
+              testDone()
+
+            error: (object, error) -> fail(error.toString())
+
+        error: (object, error) -> fail(error.toString())
 
   it "read model that do not exist with index", ->
     asyncTest ->
       movie = new Movie(title: "Memento")
       movie.fetch
+        indexName: 'titleIndex'
         success: (object) ->
           fail("Model should not exist: #{object}")
 
