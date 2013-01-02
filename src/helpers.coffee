@@ -1,4 +1,4 @@
-window.IndexedDBBackbone =
+IndexedDBBackbone =
   # Generate four random hex digits.
   S4: ->
     (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
@@ -19,4 +19,6 @@ window.IndexedDBBackbone =
 if typeof exports != 'undefined'
   window._ = require('underscore')
   window.Backbone = require('backbone')
+else
+  window.IndexedDBBackbone = IndexedDBBackbone
 
