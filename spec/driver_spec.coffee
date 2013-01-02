@@ -18,8 +18,7 @@ describe 'IndexedDBBackbone.Driver', ->
     it "initializes Driver's local readwrite transaction", ->
       runs ->
         expect(driver._transaction?).toBeFalsy()
-        # driver.begin('foo')
-        driver.execute(['foo'], 'begin')
+        driver.begin ['foo']
         expect(driver._transaction?).toBeTruthy()
         expect(driver._transaction.mode).toEqual('readwrite')
 
@@ -27,26 +26,26 @@ describe 'IndexedDBBackbone.Driver', ->
       runs ->
         spyOn(driver.db, 'transaction').andCallThrough()
 
-        driver.execute(['foo'], 'begin')
-        driver.execute('foo', 'create', { toJSON: -> { id: 1 } })
-        driver.execute('foo', 'update', { toJSON: -> { id: 1 } })
-        driver.execute('foo', 'delete', { toJSON: -> { id: 1 } })
-        driver.execute('foo', 'read', { id: 1, toJSON: -> { id: 1 } })
+        driver.begin ['foo']
+        driver.create('foo', { toJSON: -> { id: 1 } })
+        driver.update('foo', { toJSON: -> { id: 1 } })
+        driver.delete('foo', { toJSON: -> { id: 1 } })
+        driver.read('foo', { id: 1, toJSON: -> { id: 1 } })
         expect(driver.db.transaction.callCount).toEqual(1)
 
   describe 'commit', ->
     it "removes the local transaction", ->
       runs ->
-        driver.execute(['foo'], 'begin')
-        driver.execute(null, 'commit')
+        driver.begin ['foo']
+        driver.commit()
         expect(driver._transaction?).toBeFalsy()
 
   describe 'abort', ->
     it "aborts and removes the local transaction", ->
       runs ->
-        driver.execute(['foo'], 'begin')
+        driver.begin ['foo']
         spy = spyOn(driver._transaction, 'abort').andCallThrough()
-        driver.execute(null, 'abort')
+        driver.abort()
         expect(spy).toHaveBeenCalled()
         expect(driver._transaction?).toBeFalsy()
 

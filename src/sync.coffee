@@ -35,30 +35,23 @@ IndexedDBBackbone.sync = (method, object, options) ->
 
       dbName = objects[0].database
       storeNames = _.chain(objects).map((obj) -> obj.storeName).uniq().value()
-      console.log storeNames
 
-      IndexedDBBackbone._getDriver(dbName).execute storeNames, 'begin'
+      IndexedDBBackbone._getDriver(dbName).begin storeNames
 
-    when "commit"
+    when "commit", "abort"
       if object instanceof Array
         objects = object
       else
         objects = [object]
 
       dbName = objects[0].database
-      IndexedDBBackbone._getDriver(dbName).execute null, 'commit'
+      IndexedDBBackbone._getDriver(dbName)[method]()
 
-    when "abort"
-      if object instanceof Array
-        objects = object
-      else
-        objects = [object]
-
-      dbName = objects[0].database
-      IndexedDBBackbone._getDriver(dbName).execute null, 'abort'
+    when "read", "create", "update", "delete"
+      IndexedDBBackbone._getDriver(object.database)[method] object.storeName, object, options
 
     else
-      IndexedDBBackbone._getDriver(object.database).execute object.storeName, method, object, options
+      @logger "Unhandled sync method:", method
 
 if (typeof exports == 'undefined')
   Backbone.ajaxSync = Backbone.sync

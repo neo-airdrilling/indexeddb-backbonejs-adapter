@@ -44,16 +44,15 @@ class IndexedDBBackbone.Driver
       @db = null
 
   ready: () ->
-    while args = @stack.shift()
-      @_execute args...
+    operation() while operation = @stack.shift()
 
-  execute: () ->
+  execute: (operation) ->
     switch @state
       when 'closed'
         @open()
-        @stack.push arguments
+        @stack.push operation
       when 'opening'
-        @stack.push arguments
+        @stack.push operation
       when 'open'
-        @_execute arguments...
+        operation()
 

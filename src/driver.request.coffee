@@ -1,7 +1,7 @@
 class IndexedDBBackbone.Driver.Request
   constructor: (transaction, storeName, objectJSON, options) ->
     @objectJSON = objectJSON
-    @options = options
+    @options = options || {}
 
     @store = transaction.objectStore(storeName)
 
@@ -14,10 +14,9 @@ class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Reque
 
     request = if @store.keyPath then @store.add(@objectJSON) else @store.add(@objectJSON, @objectJSON.id)
 
-    request.onerror = (e) =>
-      @options.error(e)
-    request.onsuccess = (e) =>
-      @options.success(@objectJSON)
+    request.onerror = @options.error
+    if @options.success
+      request.onsuccess = (e) => @options.success(@objectJSON)
 
 class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
@@ -25,47 +24,41 @@ class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Reque
 
     request = if @store.keyPath then @store.put(@objectJSON) else @store.put(@objectJSON, @objectJSON.id)
 
-    request.onerror = (e) =>
-      @options.error(e)
-    request.onsuccess = (e) =>
-      @options.success(@objectJSON)
+    request.onerror = @options.error
+    if @options.success
+      request.onsuccess = (e) => @options.success(@objectJSON)
 
 class IndexedDBBackbone.Driver.DeleteRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
     request = @store.delete(@objectJSON.id)
-    request.onsuccess = (event) =>
-      @options.success(null)
-    request.onerror = (event) =>
-      @options.error("Not Deleted")
+    request.onsuccess = (e) => @options.success(@objectJSON)
+    request.onerror = @options.error
 
 class IndexedDBBackbone.Driver.ClearRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
     request = @store.clear()
-    request.onsuccess = (e) =>
-      @options.success(null)
-    request.onerror = (e) =>
-      @options.error("Not Cleared")
+    request.onsuccess = @options.success
+    request.onerror = @options.error
 
 class IndexedDBBackbone.Driver.GetRequest extends IndexedDBBackbone.Driver.Request
-  execute: -> #this doesn't have to call bindCallbacks because it's different
+  execute: ->
     if (@objectJSON.id)
       getRequest = @store.get(@objectJSON.id)
     else
       _.each @store.indexNames, (key, index) =>
         index = @store.index(key)
-        if @objectJSON[index.keyPath]
+        if @objectJSON[index.keyPath] # FIXME: Doesn't work with nested paths. e.g. "foo.bar"
           getRequest = index.get(@objectJSON[index.keyPath])
 
     if (getRequest)
       getRequest.onsuccess = (e) =>
-        if (e.target.result)
-          @options.success(e.target.result)
+        if (e.target.result) # TODO: handle many results on non-unique index?
+          @options.success?(e.target.result)
         else
-          @options.error("Not Found")
-      getRequest.onerror = () =>
-        @options.error("Not Found") # We couldn't find the record.
+          @options.error?("Not Found") # TODO: when does this happen...
+      getRequest.onerror = @options.error # ...as opposed to this?
     else
-      @options.error("Not Found") # We couldn't even look for it, as we don't have enough data.
+      @options.error?("Couldn't search: no index matches the provided model data")
 
 class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Request
 

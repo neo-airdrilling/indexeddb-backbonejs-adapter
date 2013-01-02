@@ -1,51 +1,50 @@
 class IndexedDBBackbone.Driver extends IndexedDBBackbone.Driver
-  # Tracks transactions. Mostly for debugging purposes. TO-IMPROVE
-  _track_transaction: (transaction) ->
-    @transactions.push(transaction)
-    removeIt = =>
-      idx = @transactions.indexOf(transaction)
-      if (idx != -1)
-        @transactions.splice(idx)
-    transaction.oncomplete = removeIt
-    transaction.onabort = removeIt
-    transaction.onerror = removeIt
 
-  _getTransaction: (storeNames, mode = 'readonly') ->
-    @_transaction || @db.transaction(storeNames, mode)
+  begin: (storeNames) ->
+    @execute =>
+      @_transaction = @db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
 
-  # This is the main method, called by the ExecutionQueue when the driver is ready (database open and migration performed)
-  _execute: (storeNames, method, object, options) ->
-    @logger("execute : " + method +  " on " + storeNames + " for " + object?.id)
-    switch method
-      when "begin"
-        @_transaction = @db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
-      when "commit"
-        @_transaction = null
-      when 'abort'
-        @_transaction.abort()
-        @_transaction = null
-      when "create"
-        transaction = @_getTransaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
-        request = new IndexedDBBackbone.Driver.AddRequest(transaction, storeNames, object.toJSON(), options)
-      when "read"
-        if object.id || object.cid
-          transaction = @_getTransaction(storeNames)
-          # transaction = @db.transaction(storeNames, "readonly") #TODO: use transaction too
-          request = new IndexedDBBackbone.Driver.GetRequest(transaction, storeNames, object.toJSON(), options)
-        else
-          @query(storeNames, object, options) # It's a collection
-      when "update" # We may want to check that this is not a collection. TOFIX
-        transaction = @_getTransaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
-        request = new IndexedDBBackbone.Driver.PutRequest(transaction, storeNames, object.toJSON(), options)
-      when "delete"
-        transaction = @_transaction || @db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
-        if object.id || object.cid
-          request = new IndexedDBBackbone.Driver.DeleteRequest(transaction, storeNames, object.toJSON(), options)
-        else
-          request = new IndexedDBBackbone.Driver.ClearRequest(transaction, storeNames, object.toJSON(), options)
+  commit: ->
+    @execute =>
+      @_transaction = null
+
+  abort: ->
+    @execute =>
+      @_transaction.abort()
+      @_transaction = null
+
+  create: (storeNames, object, options) ->
+    @execute =>
+      transaction = @transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
+      request = new IndexedDBBackbone.Driver.AddRequest(transaction, storeNames, object.toJSON(), options)
+      request.execute()
+
+  read: (storeNames, object, options) ->
+    @execute =>
+      if object.id || object.cid
+        transaction = @transaction(storeNames)
+        request = new IndexedDBBackbone.Driver.GetRequest(transaction, storeNames, object.toJSON(), options)
+        request.execute()
       else
-        @logger "Unknown method", method, "is called for", object
-    request.execute() if request
+        @query(storeNames, object, options)
+
+  update: (storeNames, object, options) ->
+    @execute =>
+      transaction = @transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
+      request = new IndexedDBBackbone.Driver.PutRequest(transaction, storeNames, object.toJSON(), options)
+      request.execute()
+
+  delete: (storeNames, object, options) ->
+    @execute =>
+      transaction = @transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
+      if object.id || object.cid
+        request = new IndexedDBBackbone.Driver.DeleteRequest(transaction, storeNames, object.toJSON(), options)
+      else
+        request = new IndexedDBBackbone.Driver.ClearRequest(transaction, storeNames, object.toJSON(), options)
+      request.execute()
+
+  transaction: (storeNames, mode = IndexedDBBackbone.IDBTransaction.READ_ONLY) ->
+    @_transaction || @db.transaction(storeNames, mode)
 
   # Performs a query on storeName in db.
   # options may include :
