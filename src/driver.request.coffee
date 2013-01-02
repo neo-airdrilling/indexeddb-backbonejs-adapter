@@ -31,8 +31,10 @@ class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Reque
 class IndexedDBBackbone.Driver.DeleteRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
     request = @store.delete(@objectJSON.id)
-    request.onsuccess = (e) => @options.success(@objectJSON)
+
     request.onerror = @options.error
+    if @options.success
+      request.onsuccess = (e) => @options.success(@objectJSON)
 
 class IndexedDBBackbone.Driver.ClearRequest extends IndexedDBBackbone.Driver.Request
   execute: ->
