@@ -147,6 +147,7 @@ describe "indexdb backbone driver", ->
           # expect(false).toEqual(true)
 
   describe "reads collection", ->
+    Query = IndexedDBBackbone.IDBQuery
     theater = null
 
     beforeEach ->
@@ -170,7 +171,7 @@ describe "indexdb backbone driver", ->
     it "with limit", ->
       runReadCollectionTest ->
         theater.fetch
-          limit: 3
+          query: new Query('movies').limit(3)
           success: ->
             expect(3).toEqual(theater.models.length)
             expect(theater.pluck("title")).toEqual(["Hello", "Bonjour", "Halo"])
@@ -179,7 +180,7 @@ describe "indexdb backbone driver", ->
     it "with offset", ->
       runReadCollectionTest ->
         theater.fetch
-          offset: 2
+          query: new Query('movies').offset(2)
           success: ->
             expect(theater.models.length).toEqual(3)
             expect(theater.pluck("title")).toEqual(["Halo", "Nihao", "Ciao"])
@@ -188,8 +189,7 @@ describe "indexdb backbone driver", ->
     it "with offset and limit", ->
       runReadCollectionTest ->
         theater.fetch
-          offset: 1
-          limit: 2
+          query: new Query('movies').limit(2).offset(1)
           success: ->
             expect(theater.models.length).toEqual(2)
             expect(theater.pluck("title")).toEqual(["Bonjour", "Halo"])
@@ -198,7 +198,7 @@ describe "indexdb backbone driver", ->
     it "with range", ->
       runReadCollectionTest ->
         theater.fetch
-          range: ["1.5", "4.5"]
+          query: new Query('movies').bounds("1.5", "4.5")
           success: ->
             expect(theater.models.length).toEqual(3)
             expect(theater.pluck("title")).toEqual(["Bonjour", "Halo", "Nihao"])
@@ -207,8 +207,7 @@ describe "indexdb backbone driver", ->
     it "via condition on index with a single value", ->
       runReadCollectionTest ->
         theater.fetch
-          conditions:
-            format: "dvd"
+          query: new Query('movies', 'formatIndex').only('dvd')
           success: ->
             expect(theater.models.length).toEqual(2)
             expect(theater.pluck("title")).toEqual(["Bonjour", "Ciao"])
@@ -217,8 +216,7 @@ describe "indexdb backbone driver", ->
     it "read collection via condition on index with a range", ->
       runReadCollectionTest ->
         theater.fetch
-          conditions:
-            format: ["a", "f"]
+          query: new Query('movies', 'formatIndex').bounds("a", "f")
           success: ->
             expect(theater.models.length).toEqual(4)
             expect(theater.pluck("title")).toEqual(["Hello", "Halo", "Bonjour", "Ciao"])
@@ -227,9 +225,7 @@ describe "indexdb backbone driver", ->
     it "via condition on index with a range and a limit", ->
       runReadCollectionTest ->
         theater.fetch
-          limit: 2
-          conditions:
-            format: ["a", "f"]
+          query: new Query('movies', 'formatIndex').limit(2).bounds("a", "f")
           success: ->
             expect(theater.models.length).toEqual(2)
             expect(theater.pluck("title")).toEqual(["Hello", "Halo"])
@@ -238,10 +234,7 @@ describe "indexdb backbone driver", ->
     it "via condition on index with a range, an offset and a limit", ->
       runReadCollectionTest ->
         theater.fetch
-          offset: 2
-          limit: 2
-          conditions:
-            format: ["a", "f"]
+          query: new Query('movies', 'formatIndex').limit(2).offset(2).bounds("a", "f")
           success: ->
             expect(theater.models.length).toEqual(2)
             expect(theater.pluck("title")).toEqual(["Bonjour", "Ciao"])
@@ -250,26 +243,11 @@ describe "indexdb backbone driver", ->
     it "via condition on index with a range reversed", ->
       runReadCollectionTest ->
         theater.fetch
-          conditions:
-            format: ["f", "a"]
+          query: new Query('movies', 'titleIndex').desc()
           success: ->
-            expect(theater.models.length).toEqual(4)
-            expect(theater.pluck("title")).toEqual(["Ciao", "Bonjour", "Halo", "Hello"])
+            expect(theater.models.length).toEqual(5)
+            expect(theater.pluck("title")).toEqual(["Nihao", "Hello", "Halo", "Ciao", "Bonjour"])
             testDone()
-
-    xit "support for the 'addIndividually' property", ->
-      runReadCollectionTest ->
-        spy = jasmine.createSpy 'add'
-
-        theater = new Theater()
-        theater.on "add", spy
-        theater.fetch
-          addIndividually: true
-          success: ->
-            expect(spy.callCount).toEqual 5
-            testDone()
-          error: ->
-            fail()
 
   it "support for model specific sync override", ->
     expect(typeof Backbone.ajaxSync).toEqual("function")

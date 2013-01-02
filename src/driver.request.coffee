@@ -61,4 +61,37 @@ class IndexedDBBackbone.Driver.GetRequest extends IndexedDBBackbone.Driver.Reque
       @options.error?("Couldn't search: no index matches the provided model data")
 
 class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Request
+  execute: ->
+    options = @options
+    query = options.query
+
+    elements = []
+    needsAdvancement = query._offset > 0
+
+    source = if query._indexName then @store.index(query._indexName) else @store
+    bounds = null
+
+    if query._only
+      bounds = IndexedDBBackbone.IDBKeyRange.only(query._only)
+    else if query._lower || query._upper
+      bounds = IndexedDBBackbone.IDBKeyRange.bound query._lower, query._upper, query._lowerOpen, query._upperOpen
+
+    cursorRequest = source.openCursor bounds, query._direction
+
+    cursorRequest.onerror = (e) ->
+      options.error("cursorRequest error", e)
+
+    cursorRequest.onsuccess = (e) ->
+      if cursor = e.target.result
+        if (needsAdvancement)
+          needsAdvancement = false
+          cursor.advance(query._offset)
+        else
+          elements.push(cursor.value)
+          if (query._limit && elements.length >= query._limit)
+            options.success?(elements) # We're done.
+          else
+            cursor.continue()
+      else
+        options.success?(elements) # We're done. No more elements.
 
