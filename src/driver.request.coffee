@@ -76,7 +76,7 @@ class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Request
     else if query._lower || query._upper
       bounds = IndexedDBBackbone.IDBKeyRange.bound query._lower, query._upper, query._lowerOpen, query._upperOpen
 
-    cursorRequest = source.openCursor bounds, query._direction
+    cursorRequest = source.openCursor bounds, query.getDirection()
 
     cursorRequest.onerror = (e) ->
       options.error("cursorRequest error", e)

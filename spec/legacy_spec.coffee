@@ -249,6 +249,15 @@ describe "indexdb backbone driver", ->
             expect(theater.pluck("title")).toEqual(["Nihao", "Hello", "Halo", "Ciao", "Bonjour"])
             testDone()
 
+    it "via unique keys on an index", ->
+      runReadCollectionTest ->
+        theater.fetch
+          query: new Query('movies', 'formatIndex').unique()
+          success: ->
+            expect(theater.models.length).toEqual(3)
+            expect(theater.pluck("format")).toEqual(["blueray", "dvd", "streaming"])
+            testDone()
+
   it "support for model specific sync override", ->
     expect(typeof Backbone.ajaxSync).toEqual("function")
 

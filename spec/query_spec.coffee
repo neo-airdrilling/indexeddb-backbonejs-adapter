@@ -1,6 +1,11 @@
 describe 'IDBQuery', ->
   IDBQuery = IndexedDBBackbone.IDBQuery
 
+  query = null
+
+  beforeEach ->
+    query = new IDBQuery('foo')
+
   describe 'constructor', ->
     it "defines the store name", ->
       expect(new IDBQuery('foo')._storeName).toEqual 'foo'
@@ -13,46 +18,46 @@ describe 'IDBQuery', ->
 
   describe 'limit', ->
     it 'defines the limit', ->
-      expect(new IDBQuery('foo').limit(4)._limit).toEqual 4
+      expect(query.limit(4)._limit).toEqual 4
 
   describe 'offset', ->
     it 'defines the offset', ->
-      expect(new IDBQuery('foo').offset(4)._offset).toEqual 4
+      expect(query.offset(4)._offset).toEqual 4
 
   describe 'lowerBound', ->
     it 'defines the lower bound', ->
-      query = new IDBQuery('foo').lowerBound('low', true)
+      query.lowerBound('low', true)
       expect(query._lower).toEqual 'low'
       expect(query._lowerOpen).toEqual true
 
     it 'defaults to a closed bound', ->
-      query = new IDBQuery('foo').lowerBound('low', true)
+      query.lowerBound('low', true)
 
       query.lowerBound('lower')
       expect(query._lowerOpen).toEqual false
 
   describe 'upperBound', ->
     it 'defines the upper bound', ->
-      query = new IDBQuery('foo').upperBound('up', true)
+      query.upperBound('up', true)
       expect(query._upper).toEqual 'up'
       expect(query._upperOpen).toEqual true
 
     it 'defaults to a closed bound', ->
-      query = new IDBQuery('foo').upperBound('up', true)
+      query.upperBound('up', true)
 
       query.upperBound('upper')
       expect(query._upperOpen).toEqual false
 
   describe 'bounds', ->
     it 'defines inclusive lower and upper bounds', ->
-      query = new IDBQuery('foo').bounds('low', 'high', true, true)
+      query.bounds('low', 'high', true, true)
       expect(query._lower).toEqual 'low'
       expect(query._lowerOpen).toEqual true
       expect(query._upper).toEqual 'high'
       expect(query._upperOpen).toEqual true
 
     it 'defaults to closed bounds', ->
-      query = new IDBQuery('foo').bounds('low', 'high', true, true)
+      query.bounds('low', 'high', true, true)
 
       query.bounds('low', 'high')
       expect(query._lowerOpen).toEqual false
@@ -60,13 +65,34 @@ describe 'IDBQuery', ->
 
   describe 'only', ->
     it 'defines only value', ->
-      expect(new IDBQuery('foo').only('bar')._only).toEqual 'bar'
+      expect(query.only('bar')._only).toEqual 'bar'
 
   describe 'direction', ->
-    it 'defines direction value', ->
-      expect(new IDBQuery('foo').desc()._direction).toEqual IndexedDBBackbone.IDBCursor.PREV
-      expect(new IDBQuery('foo').asc()._direction).toEqual IndexedDBBackbone.IDBCursor.NEXT
+    describe 'asc', ->
+      it 'sets asc to true', ->
+        query._asc = false
+        expect(query.asc()._asc).toEqual(true)
 
-    it 'defaults to asc', ->
-      expect(new IDBQuery('foo')._direction).toEqual IndexedDBBackbone.IDBCursor.NEXT
+    describe 'desc', ->
+      it 'sets asc to false', ->
+        query._asc = true
+        expect(query.desc()._asc).toEqual(false)
+
+    describe 'unique', ->
+      it 'sets unique', ->
+        expect(query.unique(true)._unique).toEqual true
+        expect(query.unique(false)._unique).toEqual false
+
+      it 'defaults to true', ->
+        expect(query.unique()._unique).toEqual true
+
+    describe 'getDirection', ->
+      it 'defaults to NEXT', ->
+        expect(query.getDirection()).toEqual IndexedDBBackbone.IDBCursor.NEXT
+
+      it 'gets the IDB direction based on asc and unique', ->
+        expect(query.desc().unique(false).getDirection()).toEqual IndexedDBBackbone.IDBCursor.PREV
+        expect(query.desc().unique(true).getDirection()).toEqual IndexedDBBackbone.IDBCursor.PREV_NO_DUPLICATE
+        expect(query.asc().unique(false).getDirection()).toEqual IndexedDBBackbone.IDBCursor.NEXT
+        expect(query.asc().unique(true).getDirection()).toEqual IndexedDBBackbone.IDBCursor.NEXT_NO_DUPLICATE
 

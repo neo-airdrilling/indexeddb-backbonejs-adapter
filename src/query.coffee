@@ -1,10 +1,14 @@
+Dir = IndexedDBBackbone.IDBCursor
+
 class IndexedDBBackbone.IDBQuery
   _storeName: null
   _indexName: null
 
   _offset: 0
   _limit: null
-  _direction: IndexedDBBackbone.IDBCursor.NEXT
+
+  _asc: true
+  _unique: false
 
   _lower: null
   _upper: null
@@ -23,10 +27,19 @@ class IndexedDBBackbone.IDBQuery
   only: (@_only) -> @
 
   asc: ->
-    @_direction = IndexedDBBackbone.IDBCursor.NEXT
+    @_asc = true
     @
 
   desc: ->
-    @_direction = IndexedDBBackbone.IDBCursor.PREV
+    @_asc = false
     @
+
+  unique: (@_unique = true) ->
+    @
+
+  getDirection: () ->
+    if @_asc
+      if @_unique then Dir.NEXT_NO_DUPLICATE else Dir.NEXT
+    else
+      if @_unique then Dir.PREV_NO_DUPLICATE else Dir.PREV
 
