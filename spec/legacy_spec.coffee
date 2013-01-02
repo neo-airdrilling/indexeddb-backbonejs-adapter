@@ -57,9 +57,9 @@ describe "indexdb backbone driver", ->
               expect(object.toJSON().format).toEqual("laserdisc")
               testDone()
 
-            error: (object, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 
-        error: (object, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "read model with index", ->
     asyncTest ->
@@ -74,9 +74,9 @@ describe "indexdb backbone driver", ->
               expect(object.get('title')).toEqual "Avatar"
               testDone()
 
-            error: (object, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 
-        error: (object, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "read model with nested key paths", ->
     asyncTest ->
@@ -91,9 +91,9 @@ describe "indexdb backbone driver", ->
               expect(object.get('release').year).toEqual 2010
               testDone()
 
-            error: (object, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 
-        error: (object, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "read model that do not exist with index", ->
     asyncTest ->
@@ -103,7 +103,7 @@ describe "indexdb backbone driver", ->
         success: (object) ->
           fail("Model should not exist: #{object}")
 
-        error: (object, error) ->
+        error: (error) ->
           expect(error.toString()).toEqual('Not Found')
           testDone()
 
@@ -125,11 +125,11 @@ describe "indexdb backbone driver", ->
                   expect(movie.toJSON().format).toEqual("dvd")
                   testDone()
 
-                error: (object, error) -> fail(error.toString())
+                error: (error) -> fail(error.toString())
 
-            error: (object, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 
-        error: (object, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "delete model", ->
     asyncTest ->
@@ -147,13 +147,13 @@ describe "indexdb backbone driver", ->
                 success: (object) ->
                   fail("should not exist: #{object}")
 
-                error: (object, error) ->
+                error: (error) ->
                   expect(error).toEqual("Not Found")
                   testDone()
 
-            error: (object, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 
-        error: (object, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
           # expect(false).toEqual(true)
 
   describe "reads collection", ->
