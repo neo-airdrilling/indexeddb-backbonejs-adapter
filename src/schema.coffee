@@ -1,4 +1,5 @@
 class IDBSchema
+  _logChannel: false
 
   @describe: (id) ->
     return new IDBSchema(id)
@@ -34,6 +35,12 @@ class IDBSchema
 
   version: ->
     @migrations.length
+
+  logChannel: (value) ->
+    unless value == undefined
+      @_logChannel = value
+    else
+      @_logChannel
 
 window.IDBSchema = IDBSchema
 

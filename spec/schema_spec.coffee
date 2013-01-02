@@ -176,3 +176,20 @@ describe 'IDBSchema', ->
       schema.createStore('bar')
       expect(schema.version()).toEqual 2
 
+  describe '#logChannel', ->
+    describe "when given no arguments (getter)", ->
+      it "returns this schema's current log channel", ->
+        expect(schema.logChannel()).toEqual false
+        schema._logChannel = 'foo'
+        expect(schema.logChannel()).toEqual 'foo'
+
+    describe "when given arguments (setter)", ->
+      it "sets the schema's log channel", ->
+        schema._logChannel = 'foo'
+
+        schema.logChannel('debug')
+        expect(schema.logChannel()).toEqual 'debug'
+
+        schema.logChannel(false)
+        expect(schema.logChannel()).toEqual false
+

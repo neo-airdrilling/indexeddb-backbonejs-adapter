@@ -1,18 +1,12 @@
 class IndexedDBBackbone.Driver
-  constructor: (@schema, @nolog) ->
-    @error = null
-    @transactions = [] # Used to list all transactions and keep track of active ones.
-    @db = null
-    @stack = []
-    @state = 'closed'
-    @_transaction = null
+  @db: null
+  @stack: null
+  @state: 'closed'
+  @_transaction: null
 
-    @logger = ->
-      unless @nolog
-        if window?.console?.log?
-          window.console.log.apply window.console, arguments
-        else if console?.log?
-          console.log apply console, arguments
+  constructor: (@schema) ->
+    @stack = []
+    @logger = IndexedDBBackbone.getLogger(@schema.logChannel())
 
     @open()
 

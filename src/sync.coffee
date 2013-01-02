@@ -17,7 +17,7 @@ IndexedDBBackbone._getDriver = (databaseName) ->
       Databases[schema.id].close()
       delete Databases[schema.id]
 
-  Databases[schema.id] ||= new IndexedDBBackbone.Driver(schema, schema.nolog)
+  Databases[schema.id] ||= new IndexedDBBackbone.Driver(schema)
 
 IndexedDBBackbone.sync = (method, object, options) ->
   switch method
