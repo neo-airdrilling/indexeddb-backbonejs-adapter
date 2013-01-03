@@ -1,15 +1,15 @@
-IndexedDBBackbone.transaction = (objects, callback) ->
+IndexedDBBackbone.transaction = (objects, callback, options) ->
   indexedDB = IndexedDBBackbone.indexedDB
 
-  IndexedDBBackbone.sync 'begin', objects
+  IndexedDBBackbone.sync 'begin', objects, options
   try
     if callback()
       IndexedDBBackbone.sync 'commit', objects
     else
       IndexedDBBackbone.sync 'abort', objects
   catch error
-    console.error "Error in transaction, rolling back:", error
     IndexedDBBackbone.sync 'abort', objects
+    options?.error?(error)
 
 Backbone.transaction = IndexedDBBackbone.transaction
 

@@ -36,7 +36,7 @@ IndexedDBBackbone.sync = (method, object, options) ->
       dbName = objects[0].database
       storeNames = _.chain(objects).map((obj) -> obj.storeName).uniq().value()
 
-      IndexedDBBackbone._getDriver(dbName).begin storeNames
+      IndexedDBBackbone._getDriver(dbName).begin storeNames, options
 
     when "commit", "abort"
       if object instanceof Array

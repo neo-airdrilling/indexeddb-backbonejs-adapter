@@ -1,8 +1,10 @@
 class IndexedDBBackbone.Driver extends IndexedDBBackbone.Driver
 
-  begin: (storeNames) ->
+  begin: (storeNames, options) ->
     @execute =>
       @_transaction = @db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
+      @_transaction.oncomplete = options.success if options?.success?
+      @_transaction.onabort = options.abort if options?.abort?
 
   commit: ->
     @execute =>
