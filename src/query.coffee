@@ -12,7 +12,6 @@ class IndexedDBBackbone.IDBQuery
 
   _lower: null
   _upper: null
-
   _lowerOpen: false
   _upperOpen: false
 
@@ -24,7 +23,12 @@ class IndexedDBBackbone.IDBQuery
   lowerBound: (@_lower, @_lowerOpen = false) -> @
   upperBound: (@_upper, @_upperOpen = false) -> @
   bounds: (@_lower, @_upper, @_lowerOpen = false, @_upperOpen = false) -> @
-  only: (@_only) -> @
+  only: (value) ->
+    @_lower = value
+    @_upper = value
+    @_lowerOpen = false
+    @_upperOpen = false
+    @
 
   asc: ->
     @_asc = true
@@ -37,7 +41,17 @@ class IndexedDBBackbone.IDBQuery
   unique: (@_unique = true) ->
     @
 
-  getDirection: () ->
+  getKeyRange: ->
+    if @_lower? && @_upper?
+      IndexedDBBackbone.IDBKeyRange.bound(@_lower, @_upper, @_lowerOpen, @_upperOpen)
+    else if @_lower?
+      IndexedDBBackbone.IDBKeyRange.lowerBound(@_lower, @_lowerOpen)
+    else if @_upper?
+      IndexedDBBackbone.IDBKeyRange.upperBound(@_upper, @_upperOpen)
+    else
+      null
+
+  getDirection: ->
     if @_asc
       if @_unique then Dir.NEXT_NO_DUPLICATE else Dir.NEXT
     else

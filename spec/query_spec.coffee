@@ -26,46 +26,46 @@ describe 'IDBQuery', ->
 
   describe 'lowerBound', ->
     it 'defines the lower bound', ->
-      query.lowerBound('low', true)
-      expect(query._lower).toEqual 'low'
-      expect(query._lowerOpen).toEqual true
+      range = query.lowerBound('low', true).getKeyRange()
+      expect(range.lower).toEqual 'low'
+      expect(range.lowerOpen).toEqual true
+      expect(range.upper).not.toBeDefined()
 
     it 'defaults to a closed bound', ->
-      query.lowerBound('low', true)
-
-      query.lowerBound('lower')
-      expect(query._lowerOpen).toEqual false
+      range = query.lowerBound('low', true).lowerBound('low').getKeyRange()
+      expect(range.lowerOpen).toEqual false
 
   describe 'upperBound', ->
     it 'defines the upper bound', ->
-      query.upperBound('up', true)
-      expect(query._upper).toEqual 'up'
-      expect(query._upperOpen).toEqual true
+      range = query.upperBound('up', true).getKeyRange()
+      expect(range.upper).toEqual 'up'
+      expect(range.upperOpen).toEqual true
+      expect(range.lower).not.toBeDefined()
 
     it 'defaults to a closed bound', ->
-      query.upperBound('up', true)
-
-      query.upperBound('upper')
-      expect(query._upperOpen).toEqual false
+      range = query.upperBound('high', true).upperBound('high').getKeyRange()
+      expect(range.upperOpen).toEqual false
 
   describe 'bounds', ->
     it 'defines inclusive lower and upper bounds', ->
-      query.bounds('low', 'high', true, true)
-      expect(query._lower).toEqual 'low'
-      expect(query._lowerOpen).toEqual true
-      expect(query._upper).toEqual 'high'
-      expect(query._upperOpen).toEqual true
+      range = query.bounds('lower', 'upper', true, true).getKeyRange()
+      expect(range.lower).toEqual 'lower'
+      expect(range.lowerOpen).toEqual true
+      expect(range.upper).toEqual 'upper'
+      expect(range.upperOpen).toEqual true
 
     it 'defaults to closed bounds', ->
-      query.bounds('low', 'high', true, true)
-
-      query.bounds('low', 'high')
-      expect(query._lowerOpen).toEqual false
-      expect(query._upperOpen).toEqual false
+      range = query.bounds('lower', 'upper', true, true).bounds('lower', 'upper').getKeyRange()
+      expect(range.lowerOpen).toEqual false
+      expect(range.upperOpen).toEqual false
 
   describe 'only', ->
-    it 'defines only value', ->
-      expect(query.only('bar')._only).toEqual 'bar'
+    it 'defines a closed bound over the given value', ->
+      range = query.only('bar').getKeyRange()
+      expect(range.lower).toEqual 'bar'
+      expect(range.lowerOpen).toEqual false
+      expect(range.upper).toEqual 'bar'
+      expect(range.upperOpen).toEqual false
 
   describe 'direction', ->
     describe 'asc', ->
@@ -95,4 +95,12 @@ describe 'IDBQuery', ->
         expect(query.desc().unique(true).getDirection()).toEqual IndexedDBBackbone.IDBCursor.PREV_NO_DUPLICATE
         expect(query.asc().unique(false).getDirection()).toEqual IndexedDBBackbone.IDBCursor.NEXT
         expect(query.asc().unique(true).getDirection()).toEqual IndexedDBBackbone.IDBCursor.NEXT_NO_DUPLICATE
+
+  describe 'getKeyRange', ->
+    it 'returns an IDBKeyRange instance when a bound exists', ->
+      query.lowerBound('foo')
+      expect(query.getKeyRange() instanceof IndexedDBBackbone.IDBKeyRange).toBeTruthy()
+
+    it 'returns null if no range is given', ->
+      expect(query.getKeyRange()).toBeNull()
 
