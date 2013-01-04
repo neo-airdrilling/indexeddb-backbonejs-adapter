@@ -16,12 +16,11 @@ describe "indexdb backbone driver", ->
         title: "The Matrix",
         format: "dvd"
       ,
-        success: () ->
+        success: (object) ->
           duplicatedRecord = new Movie()
-          duplicatedRecord.isNew = () ->
-            true # BAckbone uses isNew to detecth whether to do an update or a create, and isNew is by default based on the presence of an "id" attribute.
+          duplicatedRecord.isNew = () -> true # BAckbone uses isNew to detecth whether to do an update or a create, and isNew is by default based on the presence of an "id" attribute.
           duplicatedRecord.save
-            id: movie.id,
+            imdb: movie.get('imdb'),
             title: "The Matrix, the movie",
             format: "streaming"
           ,
@@ -30,7 +29,7 @@ describe "indexdb backbone driver", ->
 
         error: (error) -> fail(error.toString())
 
-  it "read model with id", ->
+  it "read model with imdb", ->
     asyncTest ->
       movie = new Movie()
       movie.save
@@ -38,7 +37,7 @@ describe "indexdb backbone driver", ->
         format: "laserdisc"
       ,
         success: ->
-          saved = new Movie(id: movie.id)
+          saved = new Movie(imdb: movie.get('imdb'))
           saved.fetch
             success: (object) ->
               expect(saved.toJSON().title).toEqual("Avatar")

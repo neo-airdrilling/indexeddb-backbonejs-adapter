@@ -55,7 +55,13 @@ IndexedDBBackbone.sync = (method, object, options) ->
         IndexedDBBackbone._getDriver(object.database).query object.storeName, options
 
     when "create", "update"
-      method = if method == "create" then "add" else "put"
+      if method == "create"
+        method = "add"
+        # this will be ignored if store doesn't have a keyPath and uses key generator
+        object.set(object.idAttribute, IndexedDBBackbone.guid()) unless object.id?
+      else
+        method = "put"
+
       options = _.extend {}, options, { key: object.id }
       IndexedDBBackbone._getDriver(object.database)[method] object.storeName, object.toJSON(), options
 

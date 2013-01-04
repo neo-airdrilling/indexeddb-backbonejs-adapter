@@ -2,7 +2,7 @@
 DBNAME = "movies-database"
 
 IndexedDBBackbone.describe(DBNAME)
-  .createStore('movies', keyPath: 'id')
+  .createStore('movies', keyPath: 'imdb')
   .createIndex('movies', 'titleIndex', 'title', unique: false)
   .createIndex('movies', 'formatIndex', 'format', unique: false)
   .createIndex('movies', 'releaseIndex', 'release.year', unique: false)
@@ -12,6 +12,7 @@ IndexedDBBackbone.describe(DBNAME)
 class window.Movie extends Backbone.Model
   database: DBNAME
   storeName: "movies"
+  idAttribute: 'imdb'
 
 class window.Torrent extends Backbone.Model
   database: DBNAME
@@ -57,7 +58,7 @@ window.deleteDB = (dbName) ->
 deleteDB(DBNAME)
 
 window.fail = () ->
-  console.error.apply arguments
+  console.error arguments...
 
   expect(true).toEqual(false)
   testDone()
@@ -67,23 +68,23 @@ window.addAllMovies = (movies, done) ->
     movies = [
       title: "Hello"
       format: "blueray"
-      id: "1"
+      imdb: "1"
     ,
       title: "Bonjour"
       format: "dvd"
-      id: "2"
+      imdb: "2"
     ,
       title: "Halo"
       format: "blueray"
-      id: "3"
+      imdb: "3"
     ,
       title: "Nihao"
       format: "streaming"
-      id: "4"
+      imdb: "4"
     ,
       title: "Ciao"
       format: "dvd"
-      id: "5"
+      imdb: "5"
     ]
   movie = movies.shift()
   if movie

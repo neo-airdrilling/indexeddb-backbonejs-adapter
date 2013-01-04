@@ -485,7 +485,14 @@
         break;
       case "create":
       case "update":
-        method = method === "create" ? "add" : "put";
+        if (method === "create") {
+          method = "add";
+          if (object.id == null) {
+            object.set(object.idAttribute, IndexedDBBackbone.guid());
+          }
+        } else {
+          method = "put";
+        }
         options = _.extend({}, options, {
           key: object.id
         });
