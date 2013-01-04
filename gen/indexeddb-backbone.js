@@ -12,6 +12,11 @@
     guid: function() {
       return this.S4() + this.S4() + "-" + this.S4() + "-" + this.S4() + "-" + this.S4() + "-" + this.S4() + this.S4() + this.S4();
     },
+    value: function(object, key) {
+      return _.reduce(key.split('.'), (function(obj, key) {
+        return obj != null ? obj[key] : void 0;
+      }), object);
+    },
     getLogger: function(channel) {
       var _ref;
       if (channel) {
@@ -123,143 +128,235 @@
       }
     };
 
+    Driver.prototype.begin = function(storeNames, options) {
+      var _this = this;
+      return this.execute(function() {
+        _this._transaction = _this.db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
+        if ((options != null ? options.success : void 0) != null) {
+          _this._transaction.oncomplete = options.success;
+        }
+        if ((options != null ? options.abort : void 0) != null) {
+          return _this._transaction.onabort = options.abort;
+        }
+      });
+    };
+
+    Driver.prototype.commit = function() {
+      var _this = this;
+      return this.execute(function() {
+        return _this._transaction = null;
+      });
+    };
+
+    Driver.prototype.abort = function() {
+      var _this = this;
+      return this.execute(function() {
+        _this._transaction.abort();
+        return _this._transaction = null;
+      });
+    };
+
+    Driver.prototype.get = function(storeName, object, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction(storeName);
+        request = new IndexedDBBackbone.Driver.GetOperation(transaction, storeName, object, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype.query = function(storeName, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction(storeName);
+        request = new IndexedDBBackbone.Driver.Query(transaction, storeName, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype.add = function(storeName, object, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
+        request = new IndexedDBBackbone.Driver.AddOperation(transaction, [storeName], object, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype.put = function(storeName, object, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
+        request = new IndexedDBBackbone.Driver.PutOperation(transaction, [storeName], object, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype["delete"] = function(storeName, key, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
+        request = new IndexedDBBackbone.Driver.DeleteOperation(transaction, storeName, key, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype.clear = function(storeName, options) {
+      var _this = this;
+      return this.execute(function() {
+        var request, transaction;
+        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
+        request = new IndexedDBBackbone.Driver.ClearOperation(transaction, storeName, options);
+        return request.execute();
+      });
+    };
+
+    Driver.prototype.transaction = function(storeNames, mode) {
+      if (mode == null) {
+        mode = IndexedDBBackbone.IDBTransaction.READ_ONLY;
+      }
+      return this._transaction || this.db.transaction(storeNames, mode);
+    };
+
     return Driver;
 
   })();
 
-  IndexedDBBackbone.Driver.Request = (function() {
+  IndexedDBBackbone.Driver.Operation = (function() {
 
-    function Request(transaction, storeName, objectJSON, options) {
-      this.objectJSON = objectJSON;
-      this.options = options || {};
+    function Operation(transaction, storeName, data, options) {
+      this.data = data;
+      this.options = options != null ? options : {};
       this.store = transaction.objectStore(storeName);
     }
 
-    Request.prototype.execute = function() {};
+    Operation.prototype.execute = function() {};
 
-    return Request;
+    return Operation;
 
   })();
 
-  IndexedDBBackbone.Driver.AddRequest = (function(_super) {
+  IndexedDBBackbone.Driver.AddOperation = (function(_super) {
 
-    __extends(AddRequest, _super);
+    __extends(AddOperation, _super);
 
-    function AddRequest() {
-      return AddRequest.__super__.constructor.apply(this, arguments);
+    function AddOperation() {
+      return AddOperation.__super__.constructor.apply(this, arguments);
     }
 
-    AddRequest.prototype.execute = function() {
+    AddOperation.prototype.execute = function() {
       var request,
         _this = this;
-      if (this.objectJSON.id === void 0) {
-        this.objectJSON.id = IndexedDBBackbone.guid();
+      if (this.store.keyPath || this.store.autoIncrement) {
+        request = this.store.add(this.data);
+      } else {
+        request = this.store.add(this.data, this.options.key);
       }
-      if (this.objectJSON.id === null) {
-        delete this.objectJSON.id;
-      }
-      request = this.store.keyPath ? this.store.add(this.objectJSON) : this.store.add(this.objectJSON, this.objectJSON.id);
       request.onerror = this.options.error;
       if (this.options.success) {
         return request.onsuccess = function(e) {
-          return _this.options.success(_this.objectJSON);
+          return _this.options.success(_this.data);
         };
       }
     };
 
-    return AddRequest;
+    return AddOperation;
 
-  })(IndexedDBBackbone.Driver.Request);
+  })(IndexedDBBackbone.Driver.Operation);
 
-  IndexedDBBackbone.Driver.PutRequest = (function(_super) {
+  IndexedDBBackbone.Driver.PutOperation = (function(_super) {
 
-    __extends(PutRequest, _super);
+    __extends(PutOperation, _super);
 
-    function PutRequest() {
-      return PutRequest.__super__.constructor.apply(this, arguments);
+    function PutOperation() {
+      return PutOperation.__super__.constructor.apply(this, arguments);
     }
 
-    PutRequest.prototype.execute = function() {
+    PutOperation.prototype.execute = function() {
       var request,
         _this = this;
-      if (this.objectJSON.id == null) {
-        this.objectJSON.id = IndexedDBBackbone.guid();
+      if (this.store.keyPath || (this.store.autoIncrement && !this.options.key)) {
+        request = this.store.put(this.data);
+      } else {
+        request = this.store.put(this.data, this.options.key);
       }
-      request = this.store.keyPath ? this.store.put(this.objectJSON) : this.store.put(this.objectJSON, this.objectJSON.id);
       request.onerror = this.options.error;
       if (this.options.success) {
         return request.onsuccess = function(e) {
-          return _this.options.success(_this.objectJSON);
+          return _this.options.success(_this.data);
         };
       }
     };
 
-    return PutRequest;
+    return PutOperation;
 
-  })(IndexedDBBackbone.Driver.Request);
+  })(IndexedDBBackbone.Driver.Operation);
 
-  IndexedDBBackbone.Driver.DeleteRequest = (function(_super) {
+  IndexedDBBackbone.Driver.DeleteOperation = (function(_super) {
 
-    __extends(DeleteRequest, _super);
+    __extends(DeleteOperation, _super);
 
-    function DeleteRequest() {
-      return DeleteRequest.__super__.constructor.apply(this, arguments);
+    function DeleteOperation() {
+      return DeleteOperation.__super__.constructor.apply(this, arguments);
     }
 
-    DeleteRequest.prototype.execute = function() {
+    DeleteOperation.prototype.execute = function() {
       var request,
         _this = this;
-      request = this.store["delete"](this.objectJSON.id);
+      request = this.store["delete"](this.data);
       request.onerror = this.options.error;
       if (this.options.success) {
         return request.onsuccess = function(e) {
-          return _this.options.success(_this.objectJSON);
+          return _this.options.success(_this.data);
         };
       }
     };
 
-    return DeleteRequest;
+    return DeleteOperation;
 
-  })(IndexedDBBackbone.Driver.Request);
+  })(IndexedDBBackbone.Driver.Operation);
 
-  IndexedDBBackbone.Driver.ClearRequest = (function(_super) {
+  IndexedDBBackbone.Driver.ClearOperation = (function(_super) {
 
-    __extends(ClearRequest, _super);
+    __extends(ClearOperation, _super);
 
-    function ClearRequest() {
-      return ClearRequest.__super__.constructor.apply(this, arguments);
+    function ClearOperation(transaction, storeName, options) {
+      ClearOperation.__super__.constructor.call(this, transaction, storeName, null, options);
     }
 
-    ClearRequest.prototype.execute = function() {
+    ClearOperation.prototype.execute = function() {
       var request;
       request = this.store.clear();
       request.onsuccess = this.options.success;
       return request.onerror = this.options.error;
     };
 
-    return ClearRequest;
+    return ClearOperation;
 
-  })(IndexedDBBackbone.Driver.Request);
+  })(IndexedDBBackbone.Driver.Operation);
 
-  IndexedDBBackbone.Driver.GetRequest = (function(_super) {
+  IndexedDBBackbone.Driver.GetOperation = (function(_super) {
 
-    __extends(GetRequest, _super);
+    __extends(GetOperation, _super);
 
-    function GetRequest() {
-      return GetRequest.__super__.constructor.apply(this, arguments);
+    function GetOperation() {
+      return GetOperation.__super__.constructor.apply(this, arguments);
     }
 
-    GetRequest.prototype.execute = function() {
+    GetOperation.prototype.execute = function() {
       var getRequest, index, indexName, keyPath, value, _base,
         _this = this;
-      if (this.objectJSON.id) {
-        getRequest = this.store.get(this.objectJSON.id);
+      if (this.store.keyPath && (value = IndexedDBBackbone.value(this.data, this.store.keyPath))) {
+        getRequest = this.store.get(value);
       } else if (indexName = this.options.indexName) {
         index = this.store.index(indexName);
         keyPath = index.keyPath;
-        value = _.reduce(keyPath.split('.'), (function(obj, key) {
-          return obj != null ? obj[key] : void 0;
-        }), this.objectJSON);
+        value = IndexedDBBackbone.value(this.data, keyPath);
         if (value) {
           getRequest = index.get(value);
         }
@@ -279,16 +376,16 @@
       }
     };
 
-    return GetRequest;
+    return GetOperation;
 
-  })(IndexedDBBackbone.Driver.Request);
+  })(IndexedDBBackbone.Driver.Operation);
 
   IndexedDBBackbone.Driver.Query = (function(_super) {
 
     __extends(Query, _super);
 
-    function Query() {
-      return Query.__super__.constructor.apply(this, arguments);
+    function Query(transaction, storeName, options) {
+      Query.__super__.constructor.call(this, transaction, storeName, null, options);
     }
 
     Query.prototype.execute = function() {
@@ -325,105 +422,7 @@
 
     return Query;
 
-  })(IndexedDBBackbone.Driver.Request);
-
-  IndexedDBBackbone.Driver = (function(_super) {
-
-    __extends(Driver, _super);
-
-    function Driver() {
-      return Driver.__super__.constructor.apply(this, arguments);
-    }
-
-    Driver.prototype.begin = function(storeNames, options) {
-      var _this = this;
-      return this.execute(function() {
-        _this._transaction = _this.db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        if ((options != null ? options.success : void 0) != null) {
-          _this._transaction.oncomplete = options.success;
-        }
-        if ((options != null ? options.abort : void 0) != null) {
-          return _this._transaction.onabort = options.abort;
-        }
-      });
-    };
-
-    Driver.prototype.commit = function() {
-      var _this = this;
-      return this.execute(function() {
-        return _this._transaction = null;
-      });
-    };
-
-    Driver.prototype.abort = function() {
-      var _this = this;
-      return this.execute(function() {
-        _this._transaction.abort();
-        return _this._transaction = null;
-      });
-    };
-
-    Driver.prototype.create = function(storeNames, object, options) {
-      var _this = this;
-      return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.AddRequest(transaction, storeNames, object.toJSON(), options);
-        return request.execute();
-      });
-    };
-
-    Driver.prototype.read = function(storeNames, object, options) {
-      var _this = this;
-      return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeNames);
-        if (object.id || object.cid) {
-          request = new IndexedDBBackbone.Driver.GetRequest(transaction, storeNames, object.toJSON(), options);
-        } else {
-          options = _.extend({}, {
-            query: object._idbQuery || new IndexedDBBackbone.IDBQuery(object.storeName)
-          }, options);
-          request = new IndexedDBBackbone.Driver.Query(transaction, storeNames, null, options);
-        }
-        return request.execute();
-      });
-    };
-
-    Driver.prototype.update = function(storeNames, object, options) {
-      var _this = this;
-      return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.PutRequest(transaction, storeNames, object.toJSON(), options);
-        return request.execute();
-      });
-    };
-
-    Driver.prototype["delete"] = function(storeNames, object, options) {
-      var _this = this;
-      return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        if (object.id || object.cid) {
-          request = new IndexedDBBackbone.Driver.DeleteRequest(transaction, storeNames, object.toJSON(), options);
-        } else {
-          request = new IndexedDBBackbone.Driver.ClearRequest(transaction, storeNames, object.toJSON(), options);
-        }
-        return request.execute();
-      });
-    };
-
-    Driver.prototype.transaction = function(storeNames, mode) {
-      if (mode == null) {
-        mode = IndexedDBBackbone.IDBTransaction.READ_ONLY;
-      }
-      return this._transaction || this.db.transaction(storeNames, mode);
-    };
-
-    return Driver;
-
-  })(IndexedDBBackbone.Driver);
+  })(IndexedDBBackbone.Driver.Operation);
 
   IndexedDBBackbone.Databases = {};
 
@@ -447,7 +446,7 @@
   };
 
   IndexedDBBackbone.sync = function(method, object, options) {
-    var dbName, objects, storeNames;
+    var dbName, id, objects, storeNames;
     switch (method) {
       case "closeall":
         _.each(IndexedDBBackbone.Databases, function(database) {
@@ -475,10 +474,29 @@
         dbName = objects[0].database;
         return IndexedDBBackbone._getDriver(dbName)[method]();
       case "read":
+        if (object.id || object.cid) {
+          return IndexedDBBackbone._getDriver(object.database).get(object.storeName, object.toJSON(), options);
+        } else {
+          options = _.extend({}, {
+            query: object._idbQuery || new IndexedDBBackbone.IDBQuery(object.storeName)
+          }, options);
+          return IndexedDBBackbone._getDriver(object.database).query(object.storeName, options);
+        }
+        break;
       case "create":
       case "update":
+        method = method === "create" ? "add" : "put";
+        options = _.extend({}, options, {
+          key: object.id
+        });
+        return IndexedDBBackbone._getDriver(object.database)[method](object.storeName, object.toJSON(), options);
       case "delete":
-        return IndexedDBBackbone._getDriver(object.database)[method](object.storeName, object, options);
+        if (id = object.id || object.cid) {
+          return IndexedDBBackbone._getDriver(object.database)["delete"](object.storeName, id, options);
+        } else {
+          return IndexedDBBackbone._getDriver(object.database).clear(object.storeName, options);
+        }
+        break;
       default:
         return this.logger("Unhandled sync method:", method);
     }

@@ -47,8 +47,23 @@ IndexedDBBackbone.sync = (method, object, options) ->
       dbName = objects[0].database
       IndexedDBBackbone._getDriver(dbName)[method]()
 
-    when "read", "create", "update", "delete"
-      IndexedDBBackbone._getDriver(object.database)[method] object.storeName, object, options
+    when "read"
+      if object.id || object.cid
+        IndexedDBBackbone._getDriver(object.database).get object.storeName, object.toJSON(), options
+      else
+        options = _.extend({}, { query: object._idbQuery || new IndexedDBBackbone.IDBQuery(object.storeName) }, options)
+        IndexedDBBackbone._getDriver(object.database).query object.storeName, options
+
+    when "create", "update"
+      method = if method == "create" then "add" else "put"
+      options = _.extend {}, options, { key: object.id }
+      IndexedDBBackbone._getDriver(object.database)[method] object.storeName, object.toJSON(), options
+
+    when "delete"
+      if id = object.id || object.cid
+        IndexedDBBackbone._getDriver(object.database).delete object.storeName, id, options
+      else
+        IndexedDBBackbone._getDriver(object.database).clear object.storeName, options
 
     else
       @logger "Unhandled sync method:", method

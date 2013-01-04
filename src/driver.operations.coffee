@@ -1,55 +1,58 @@
-class IndexedDBBackbone.Driver.Request
-  constructor: (transaction, storeName, objectJSON, options) ->
-    @objectJSON = objectJSON
-    @options = options || {}
+class IndexedDBBackbone.Driver.Operation
+  constructor: (transaction, storeName, @data, @options = {}) ->
 
     @store = transaction.objectStore(storeName)
 
   execute: ->
 
-class IndexedDBBackbone.Driver.AddRequest extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.AddOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
-    if (@objectJSON.id == undefined) then @objectJSON.id = IndexedDBBackbone.guid()
-    if (@objectJSON.id == null) then delete @objectJSON.id
-
-    request = if @store.keyPath then @store.add(@objectJSON) else @store.add(@objectJSON, @objectJSON.id)
+    if @store.keyPath || @store.autoIncrement
+      request = @store.add(@data)
+    else
+      request = @store.add(@data, @options.key)
 
     request.onerror = @options.error
     if @options.success
-      request.onsuccess = (e) => @options.success(@objectJSON)
+      request.onsuccess = (e) => @options.success(@data)
 
-class IndexedDBBackbone.Driver.PutRequest extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
-    @objectJSON.id = IndexedDBBackbone.guid() unless @objectJSON.id?
-
-    request = if @store.keyPath then @store.put(@objectJSON) else @store.put(@objectJSON, @objectJSON.id)
+    # acts as insert & update
+    if @store.keyPath || (@store.autoIncrement && !@options.key)
+      request = @store.put(@data)
+    else
+      request = @store.put(@data, @options.key)
 
     request.onerror = @options.error
     if @options.success
-      request.onsuccess = (e) => @options.success(@objectJSON)
+      request.onsuccess = (e) => @options.success(@data)
 
-class IndexedDBBackbone.Driver.DeleteRequest extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.DeleteOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
-    request = @store.delete(@objectJSON.id)
+    request = @store.delete(@data)
 
     request.onerror = @options.error
     if @options.success
-      request.onsuccess = (e) => @options.success(@objectJSON)
+      request.onsuccess = (e) => @options.success(@data)
 
-class IndexedDBBackbone.Driver.ClearRequest extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.ClearOperation extends IndexedDBBackbone.Driver.Operation
+  constructor: (transaction, storeName, options) ->
+    super transaction, storeName, null, options
+
   execute: ->
     request = @store.clear()
     request.onsuccess = @options.success
     request.onerror = @options.error
 
-class IndexedDBBackbone.Driver.GetRequest extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.GetOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
-    if @objectJSON.id
-      getRequest = @store.get(@objectJSON.id)
+    if @store.keyPath && value = IndexedDBBackbone.value(@data, @store.keyPath)
+      getRequest = @store.get(value)
     else if indexName = @options.indexName
       index = @store.index(indexName)
       keyPath = index.keyPath
-      value = _.reduce keyPath.split('.'), ((obj, key) -> obj?[key]), @objectJSON
+      value = IndexedDBBackbone.value(@data, keyPath)
       getRequest = index.get(value) if value
 
     if (getRequest)
@@ -62,7 +65,10 @@ class IndexedDBBackbone.Driver.GetRequest extends IndexedDBBackbone.Driver.Reque
     else
       @options.error?("Couldn't search: no index matches the provided model data")
 
-class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Request
+class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Operation
+  constructor: (transaction, storeName, options) ->
+    super transaction, storeName, null, options
+
   execute: ->
     options = @options
     query = options.query

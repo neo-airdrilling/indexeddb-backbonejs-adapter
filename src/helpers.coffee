@@ -7,6 +7,9 @@ IndexedDBBackbone =
   guid: ->
     (@S4() + @S4() + "-" + @S4() + "-" + @S4() + "-" + @S4() + "-" + @S4() + @S4() + @S4())
 
+  value: (object, key) ->
+    _.reduce key.split('.'), ((obj, key) -> obj?[key]), object
+
   getLogger: (channel) ->
     if channel
       if window?.console?[channel]?

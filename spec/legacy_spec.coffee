@@ -1,5 +1,5 @@
 describe "indexdb backbone driver", ->
-  it "creates model v1", ->
+  it "creates a model", ->
     asyncTest ->
       movie = new Movie()
       movie.save
@@ -7,9 +7,9 @@ describe "indexdb backbone driver", ->
          format: "dvd"
       ,
          success: testDone
-         error: (o, error) -> fail(error.toString())
+         error: (error) -> fail(error.toString())
 
-  it "doesn't create duplicate models", ->
+  it "doesn't create duplicate models in stores with keyPath", ->
     asyncTest ->
       movie = new Movie()
       movie.save
@@ -28,17 +28,7 @@ describe "indexdb backbone driver", ->
             success: -> fail("The duplicate should been refused")
             error: testDone
 
-        error: (o, error) -> fail(error.toString())
-
-  it "create model v2", ->
-    asyncTest ->
-      movie = new Movie()
-      movie.save
-        title: "The Matrix"
-        format: "dvd"
-      ,
-        success: testDone
-        error: (o, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "read model with id", ->
     asyncTest ->
@@ -280,7 +270,7 @@ describe "indexdb backbone driver", ->
         format: "dvd"
       ,
         success: testDone
-        error: (o, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
 
   it "model update with keyPath specified", ->
     asyncTest ->
@@ -290,7 +280,7 @@ describe "indexdb backbone driver", ->
         title: "The Matrix"
         format: "dvd"
       ,
-        error: (o, error) -> fail(error.toString())
+        error: (error) -> fail(error.toString())
         success: ->
           torrent = new Torrent(id: 1)
           torrent.fetch
@@ -300,7 +290,7 @@ describe "indexdb backbone driver", ->
                 rating: 5
               ,
                 success: testDone
-                error: (o, error) -> fail(error.toString())
+                error: (error) -> fail(error.toString())
 
-            error: (o, error) -> fail(error.toString())
+            error: (error) -> fail(error.toString())
 

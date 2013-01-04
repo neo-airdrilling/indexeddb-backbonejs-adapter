@@ -2,7 +2,7 @@
 DBNAME = "movies-database"
 
 IndexedDBBackbone.describe(DBNAME)
-  .createStore('movies')
+  .createStore('movies', keyPath: 'id')
   .createIndex('movies', 'titleIndex', 'title', unique: false)
   .createIndex('movies', 'formatIndex', 'format', unique: false)
   .createIndex('movies', 'releaseIndex', 'release.year', unique: false)
@@ -56,7 +56,9 @@ window.deleteDB = (dbName) ->
 
 deleteDB(DBNAME)
 
-window.fail = (msg) ->
+window.fail = () ->
+  console.error.apply arguments
+
   expect(true).toEqual(false)
   testDone()
 
