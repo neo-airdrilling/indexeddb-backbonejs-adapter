@@ -474,7 +474,7 @@
         dbName = objects[0].database;
         return IndexedDBBackbone._getDriver(dbName)[method]();
       case "read":
-        if (object.id || object.cid) {
+        if (object instanceof Backbone.Model) {
           return IndexedDBBackbone._getDriver(object.database).get(object.storeName, object.toJSON(), options);
         } else {
           options = _.extend({}, {

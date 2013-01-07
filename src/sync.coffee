@@ -48,7 +48,7 @@ IndexedDBBackbone.sync = (method, object, options) ->
       IndexedDBBackbone._getDriver(dbName)[method]()
 
     when "read"
-      if object.id || object.cid
+      if object instanceof Backbone.Model
         IndexedDBBackbone._getDriver(object.database).get object.storeName, object.toJSON(), options
       else
         options = _.extend({}, { query: object._idbQuery || new IndexedDBBackbone.IDBQuery(object.storeName) }, options)
