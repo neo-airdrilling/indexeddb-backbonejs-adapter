@@ -99,6 +99,7 @@ describe "indexdb backbone driver", ->
   it "updates model", ->
     asyncTest ->
       movie = new Movie()
+
       movie.save
         title: "Star Wars, Episode IV"
         format: "dvd"
@@ -107,11 +108,11 @@ describe "indexdb backbone driver", ->
           movie.save
             title: "Star Wars, Episode V"
           ,
-            success: ->
+            success: (e) ->
               movie.fetch
                 success: (object) ->
-                  expect(movie.toJSON().title).toEqual("Star Wars, Episode V")
-                  expect(movie.toJSON().format).toEqual("dvd")
+                  expect(object.toJSON().title).toEqual("Star Wars, Episode V")
+                  expect(object.toJSON().format).toEqual("dvd")
                   testDone()
 
                 error: (error) -> fail(error.toString())
@@ -128,7 +129,6 @@ describe "indexdb backbone driver", ->
         format: "blue-ray"
       ,
         success: (object) ->
-
           # success
           movie.destroy
             success: (object) ->
@@ -143,7 +143,6 @@ describe "indexdb backbone driver", ->
             error: (error) -> fail(error.toString())
 
         error: (error) -> fail(error.toString())
-          # expect(false).toEqual(true)
 
   describe "reads collection", ->
     Query = IndexedDBBackbone.IDBQuery

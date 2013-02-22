@@ -50,6 +50,9 @@ class IndexedDBBackbone.Driver
       when 'open'
         operation()
 
+  _inTransaction: ->
+    !!@_transaction
+
   # Operations
 
   begin: (storeNames, options) ->
@@ -79,26 +82,30 @@ class IndexedDBBackbone.Driver
       request = new IndexedDBBackbone.Driver.Query(transaction, storeName, options)
       request.execute()
 
-  add: (storeName, object, options) ->
+  add: (storeName, object, options={}) ->
     @execute =>
+      options.inTransaction = @_inTransaction()
       transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
       request = new IndexedDBBackbone.Driver.AddOperation(transaction, [storeName], object, options)
       request.execute()
 
-  put: (storeName, object, options) ->
+  put: (storeName, object, options={}) ->
     @execute =>
+      options.inTransaction = @_inTransaction()
       transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
       request = new IndexedDBBackbone.Driver.PutOperation(transaction, [storeName], object, options)
       request.execute()
 
-  delete: (storeName, key, options) ->
+  delete: (storeName, key, options={}) ->
     @execute =>
+      options.inTransaction = @_inTransaction()
       transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
       request = new IndexedDBBackbone.Driver.DeleteOperation(transaction, storeName, key, options)
       request.execute()
 
-  clear: (storeName, options) ->
+  clear: (storeName, options={}) ->
     @execute =>
+      options.inTransaction = @_inTransaction()
       transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
       request = new IndexedDBBackbone.Driver.ClearOperation(transaction, storeName, options)
       request.execute()

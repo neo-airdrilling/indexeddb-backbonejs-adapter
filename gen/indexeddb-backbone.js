@@ -128,6 +128,10 @@
       }
     };
 
+    Driver.prototype._inTransaction = function() {
+      return !!this._transaction;
+    };
+
     Driver.prototype.begin = function(storeNames, options) {
       var _this = this;
       return this.execute(function() {
@@ -178,8 +182,12 @@
 
     Driver.prototype.add = function(storeName, object, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
         var request, transaction;
+        options.inTransaction = _this._inTransaction();
         transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
         request = new IndexedDBBackbone.Driver.AddOperation(transaction, [storeName], object, options);
         return request.execute();
@@ -188,8 +196,12 @@
 
     Driver.prototype.put = function(storeName, object, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
         var request, transaction;
+        options.inTransaction = _this._inTransaction();
         transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
         request = new IndexedDBBackbone.Driver.PutOperation(transaction, [storeName], object, options);
         return request.execute();
@@ -198,8 +210,12 @@
 
     Driver.prototype["delete"] = function(storeName, key, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
         var request, transaction;
+        options.inTransaction = _this._inTransaction();
         transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
         request = new IndexedDBBackbone.Driver.DeleteOperation(transaction, storeName, key, options);
         return request.execute();
@@ -208,8 +224,12 @@
 
     Driver.prototype.clear = function(storeName, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
         var request, transaction;
+        options.inTransaction = _this._inTransaction();
         transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
         request = new IndexedDBBackbone.Driver.ClearOperation(transaction, storeName, options);
         return request.execute();
@@ -230,9 +250,10 @@
   IndexedDBBackbone.Driver.Operation = (function() {
 
     function Operation(transaction, storeName, data, options) {
+      this.transaction = transaction;
       this.data = data;
       this.options = options != null ? options : {};
-      this.store = transaction.objectStore(storeName);
+      this.store = this.transaction.objectStore(storeName);
     }
 
     Operation.prototype.execute = function() {};
@@ -257,11 +278,20 @@
       } else {
         request = this.store.add(this.data, this.options.key);
       }
-      request.onerror = this.options.error;
-      if (this.options.success) {
-        return request.onsuccess = function(e) {
-          return _this.options.success(_this.data);
-        };
+      if (this.options.inTransaction) {
+        request.onerror = this.options.error;
+        if (this.options.success) {
+          return request.onsuccess = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
+      } else {
+        this.transaction.onerror = this.options.error;
+        if (this.options.success) {
+          return this.transaction.oncomplete = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
       }
     };
 
@@ -285,11 +315,20 @@
       } else {
         request = this.store.put(this.data, this.options.key);
       }
-      request.onerror = this.options.error;
-      if (this.options.success) {
-        return request.onsuccess = function(e) {
-          return _this.options.success(_this.data);
-        };
+      if (this.options.inTransaction) {
+        request.onerror = this.options.error;
+        if (this.options.success) {
+          return request.onsuccess = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
+      } else {
+        this.transaction.onerror = this.options.error;
+        if (this.options.success) {
+          return this.transaction.oncomplete = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
       }
     };
 
@@ -309,11 +348,20 @@
       var request,
         _this = this;
       request = this.store["delete"](this.data);
-      request.onerror = this.options.error;
-      if (this.options.success) {
-        return request.onsuccess = function(e) {
-          return _this.options.success(_this.data);
-        };
+      if (this.options.inTransaction) {
+        request.onerror = this.options.error;
+        if (this.options.success) {
+          return request.onsuccess = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
+      } else {
+        this.transaction.onerror = this.options.error;
+        if (this.options.success) {
+          return this.transaction.oncomplete = function(e) {
+            return _this.options.success(_this.data);
+          };
+        }
       }
     };
 
@@ -332,8 +380,13 @@
     ClearOperation.prototype.execute = function() {
       var request;
       request = this.store.clear();
-      request.onsuccess = this.options.success;
-      return request.onerror = this.options.error;
+      if (this.options.inTransaction) {
+        request.oncomplete = this.options.success;
+        return request.onerror = this.options.error;
+      } else {
+        this.transaction.oncomplete = this.options.success;
+        return this.transaction.onerror = this.options.error;
+      }
     };
 
     return ClearOperation;

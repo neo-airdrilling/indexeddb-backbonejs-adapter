@@ -1,7 +1,6 @@
 class IndexedDBBackbone.Driver.Operation
-  constructor: (transaction, storeName, @data, @options = {}) ->
-
-    @store = transaction.objectStore(storeName)
+  constructor: (@transaction, storeName, @data, @options = {}) ->
+    @store = @transaction.objectStore(storeName)
 
   execute: ->
 
@@ -12,9 +11,14 @@ class IndexedDBBackbone.Driver.AddOperation extends IndexedDBBackbone.Driver.Ope
     else
       request = @store.add(@data, @options.key)
 
-    request.onerror = @options.error
-    if @options.success
-      request.onsuccess = (e) => @options.success(@data)
+    if @options.inTransaction
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
+    else
+      @transaction.onerror = @options.error
+      if @options.success
+        @transaction.oncomplete = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
@@ -24,17 +28,27 @@ class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Ope
     else
       request = @store.put(@data, @options.key)
 
-    request.onerror = @options.error
-    if @options.success
-      request.onsuccess = (e) => @options.success(@data)
+    if @options.inTransaction
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
+    else
+      @transaction.onerror = @options.error
+      if @options.success
+        @transaction.oncomplete = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.DeleteOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
     request = @store.delete(@data)
 
-    request.onerror = @options.error
-    if @options.success
-      request.onsuccess = (e) => @options.success(@data)
+    if @options.inTransaction
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
+    else
+      @transaction.onerror = @options.error
+      if @options.success
+        @transaction.oncomplete = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.ClearOperation extends IndexedDBBackbone.Driver.Operation
   constructor: (transaction, storeName, options) ->
@@ -42,8 +56,13 @@ class IndexedDBBackbone.Driver.ClearOperation extends IndexedDBBackbone.Driver.O
 
   execute: ->
     request = @store.clear()
-    request.onsuccess = @options.success
-    request.onerror = @options.error
+
+    if @options.inTransaction
+      request.oncomplete = @options.success
+      request.onerror = @options.error
+    else
+      @transaction.oncomplete = @options.success
+      @transaction.onerror = @options.error
 
 class IndexedDBBackbone.Driver.GetOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
