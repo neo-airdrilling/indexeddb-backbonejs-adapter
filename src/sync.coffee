@@ -38,15 +38,6 @@ IndexedDBBackbone.sync = (method, object, options) ->
 
       IndexedDBBackbone._getDriver(dbName).begin storeNames, options
 
-    when "commit", "abort"
-      if object instanceof Array
-        objects = object
-      else
-        objects = [object]
-
-      dbName = objects[0].database
-      IndexedDBBackbone._getDriver(dbName)[method]()
-
     when "read"
       if object instanceof Backbone.Model
         IndexedDBBackbone._getDriver(object.database).get object.storeName, object.toJSON(), options

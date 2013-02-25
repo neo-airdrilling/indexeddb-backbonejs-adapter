@@ -2,7 +2,6 @@ class IndexedDBBackbone.Driver
   @db: null
   @stack: null
   @state: 'closed'
-  @_transaction: null
 
   constructor: (@schema) ->
     @stack = []
@@ -50,66 +49,47 @@ class IndexedDBBackbone.Driver
       when 'open'
         operation()
 
-  _inTransaction: ->
-    !!@_transaction
-
   # Operations
 
-  begin: (storeNames, options) ->
+  begin: (storeNames, options={}) ->
     @execute =>
       @_transaction = @db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE)
       @_transaction.oncomplete = options.success if options?.success?
       @_transaction.onabort = options.abort if options?.abort?
+      @_transaction.onerror = options.error if options?.error?
 
-  commit: ->
-    @execute =>
-      @_transaction = null
+      try
+        options.callback(@_transaction)
+      catch error
+        options?.error?(error)
 
-  abort: ->
+  get: (storeName, object, options={}) ->
     @execute =>
-      @_transaction.abort()
-      @_transaction = null
-
-  get: (storeName, object, options) ->
-    @execute =>
-      transaction = @transaction(storeName)
-      request = new IndexedDBBackbone.Driver.GetOperation(transaction, storeName, object, options)
+      request = new IndexedDBBackbone.Driver.GetOperation(@db, storeName, object, options)
       request.execute()
 
-  query: (storeName, options) ->
+  query: (storeName, options={}) ->
     @execute =>
-      transaction = @transaction(storeName)
-      request = new IndexedDBBackbone.Driver.Query(transaction, storeName, options)
+      request = new IndexedDBBackbone.Driver.Query(@db, storeName, options)
       request.execute()
 
   add: (storeName, object, options={}) ->
     @execute =>
-      options.inTransaction = @_inTransaction()
-      transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
-      request = new IndexedDBBackbone.Driver.AddOperation(transaction, [storeName], object, options)
+      request = new IndexedDBBackbone.Driver.AddOperation(@db, [storeName], object, options)
       request.execute()
 
   put: (storeName, object, options={}) ->
     @execute =>
-      options.inTransaction = @_inTransaction()
-      transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
-      request = new IndexedDBBackbone.Driver.PutOperation(transaction, [storeName], object, options)
+      request = new IndexedDBBackbone.Driver.PutOperation(@db, [storeName], object, options)
       request.execute()
 
   delete: (storeName, key, options={}) ->
     @execute =>
-      options.inTransaction = @_inTransaction()
-      transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
-      request = new IndexedDBBackbone.Driver.DeleteOperation(transaction, storeName, key, options)
+      request = new IndexedDBBackbone.Driver.DeleteOperation(@db, storeName, key, options)
       request.execute()
 
   clear: (storeName, options={}) ->
     @execute =>
-      options.inTransaction = @_inTransaction()
-      transaction = @transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE)
-      request = new IndexedDBBackbone.Driver.ClearOperation(transaction, storeName, options)
+      request = new IndexedDBBackbone.Driver.ClearOperation(@db, storeName, options)
       request.execute()
-
-  transaction: (storeNames, mode = IndexedDBBackbone.IDBTransaction.READ_ONLY) ->
-    @_transaction || @db.transaction(storeNames, mode)
 

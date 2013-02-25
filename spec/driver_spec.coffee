@@ -52,33 +52,6 @@ describe 'IndexedDBBackbone.Driver', ->
         expect(driver._transaction?).toBeTruthy()
         expect(driver._transaction.mode).toEqual('readwrite')
 
-    it "uses a single transaction for all operations", ->
-      runs ->
-        spyOn(driver.db, 'transaction').andCallThrough()
-
-        driver.begin ['store_with_inline_key']
-        driver.add('store_with_inline_key', { ssn: 1 })
-        driver.put('store_with_inline_key', { ssn: 1 }, key: 1)
-        driver.delete('store_with_inline_key', 1)
-        driver.get('store_with_inline_key', { ssn: 1 })
-        expect(driver.db.transaction.callCount).toEqual(1)
-
-  describe 'commit', ->
-    it "removes the local transaction", ->
-      runs ->
-        driver.begin ['store_with_inline_key']
-        driver.commit()
-        expect(driver._transaction?).toBeFalsy()
-
-  describe 'abort', ->
-    it "aborts and removes the local transaction", ->
-      runs ->
-        driver.begin ['store_with_inline_key']
-        spy = spyOn(driver._transaction, 'abort').andCallThrough()
-        driver.abort()
-        expect(spy).toHaveBeenCalled()
-        expect(driver._transaction?).toBeFalsy()
-
   describe 'get', ->
     describe 'with an object with keyPath', ->
       it 'retrieves the object', ->

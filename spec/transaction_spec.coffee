@@ -23,19 +23,24 @@ describe "Backbone.transaction", ->
       success6 = jasmine.createSpy()
 
       Backbone.transaction [kenshin, torrent],
-        ->
+        (transaction) ->
           #create
           theWall.save undefined,
+            transaction: transaction
             success: success1
           kenshin.save undefined,
+            transaction: transaction
             success: success2
           torrent.save undefined,
+            transaction: transaction
             success: success3
           #update
           theWall.save { name: 'UPDATED' },
+            transaction: transaction
             success: success4
           #destroy
           theWall.destroy
+            transaction: transaction
             success: success5
 
         success: ->
@@ -54,33 +59,40 @@ describe "Backbone.transaction", ->
                   expect(torrents.length).toEqual 1
                   testDone()
 
-  it "rolls back the transaction when it returns false", ->
+  it 'only commits when everything is done', ->
     asyncTest ->
-      Backbone.transaction [kenshin],
-        ->
-          theWall.save()
+
+      success1 = jasmine.createSpy()
+      success2 = jasmine.createSpy()
 
       Backbone.transaction [kenshin],
-        ->
-          kenshin.save()
-          false
-        abort: (e) ->
-          movies = new Theater()
-          movies.fetch
-            success: (e) ->
-              expect(movies.length).toEqual 1
-              expect(movies.first().get('name')).toEqual "The Wall"
+        (transaction) ->
+          #create
+          theWall.save undefined,
+            transaction: transaction
+            success: ->
+              success1()
+              kenshin.save undefined,
+                transaction: transaction
+                success: success2
+
+        success: ->
+          expect(success1).toHaveBeenCalled()
+          expect(success2).toHaveBeenCalled()
+
+          new Theater().fetch
+            success: (movies) ->
+              expect(movies.length).toEqual 2
               testDone()
-        error: (e) ->
-          fail('Not me, said the duck!')
 
   it "rolls back the transaction when errors occur", ->
     asyncTest ->
       Backbone.transaction [kenshin],
-        ->
-          theWall.save()
-          torrent.save()
-          true
+        (transaction) ->
+          theWall.save undefined,
+            transaction: transaction
+          torrent.save undefined,
+            transaction: transaction
 
         error: (e) ->
           movies = new Theater()

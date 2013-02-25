@@ -1,26 +1,38 @@
 class IndexedDBBackbone.Driver.Operation
-  constructor: (@transaction, storeName, @data, @options = {}) ->
+  mode: IndexedDBBackbone.IDBTransaction.READ_ONLY
+
+  constructor: (@db, storeName, @data, @options = {}) ->
+    @transaction = @_transaction(storeName)
     @store = @transaction.objectStore(storeName)
+
+    @exclusiveTransaction = !@options.transaction
+
+  _transaction: (storeName) ->
+    @options.transaction || @db.transaction([storeName], @mode)
 
   execute: ->
 
 class IndexedDBBackbone.Driver.AddOperation extends IndexedDBBackbone.Driver.Operation
+  mode: IndexedDBBackbone.IDBTransaction.READ_WRITE
+
   execute: ->
     if @store.keyPath || @store.autoIncrement
       request = @store.add(@data)
     else
       request = @store.add(@data, @options.key)
 
-    if @options.inTransaction
-      request.onerror = @options.error
-      if @options.success
-        request.onsuccess = (e) => @options.success(@data)
-    else
+    if @exclusiveTransaction
       @transaction.onerror = @options.error
       if @options.success
         @transaction.oncomplete = (e) => @options.success(@data)
+    else
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Operation
+  mode: IndexedDBBackbone.IDBTransaction.READ_WRITE
+
   execute: ->
     # acts as insert & update
     if @store.keyPath || (@store.autoIncrement && !@options.key)
@@ -28,41 +40,45 @@ class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Ope
     else
       request = @store.put(@data, @options.key)
 
-    if @options.inTransaction
-      request.onerror = @options.error
-      if @options.success
-        request.onsuccess = (e) => @options.success(@data)
-    else
+    if @exclusiveTransaction
       @transaction.onerror = @options.error
       if @options.success
         @transaction.oncomplete = (e) => @options.success(@data)
+    else
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.DeleteOperation extends IndexedDBBackbone.Driver.Operation
+  mode: IndexedDBBackbone.IDBTransaction.READ_WRITE
+
   execute: ->
     request = @store.delete(@data)
 
-    if @options.inTransaction
-      request.onerror = @options.error
-      if @options.success
-        request.onsuccess = (e) => @options.success(@data)
-    else
+    if @exclusiveTransaction
       @transaction.onerror = @options.error
       if @options.success
         @transaction.oncomplete = (e) => @options.success(@data)
+    else
+      request.onerror = @options.error
+      if @options.success
+        request.onsuccess = (e) => @options.success(@data)
 
 class IndexedDBBackbone.Driver.ClearOperation extends IndexedDBBackbone.Driver.Operation
-  constructor: (transaction, storeName, options) ->
-    super transaction, storeName, null, options
+  mode: IndexedDBBackbone.IDBTransaction.READ_WRITE
+
+  constructor: (db, storeName, options) ->
+    super db, storeName, null, options
 
   execute: ->
     request = @store.clear()
 
-    if @options.inTransaction
-      request.oncomplete = @options.success
-      request.onerror = @options.error
-    else
+    if @exclusiveTransaction
       @transaction.oncomplete = @options.success
       @transaction.onerror = @options.error
+    else
+      request.oncomplete = @options.success
+      request.onerror = @options.error
 
 class IndexedDBBackbone.Driver.GetOperation extends IndexedDBBackbone.Driver.Operation
   execute: ->
@@ -85,8 +101,8 @@ class IndexedDBBackbone.Driver.GetOperation extends IndexedDBBackbone.Driver.Ope
       @options.error?("Couldn't search: no index matches the provided model data")
 
 class IndexedDBBackbone.Driver.Query extends IndexedDBBackbone.Driver.Operation
-  constructor: (transaction, storeName, options) ->
-    super transaction, storeName, null, options
+  constructor: (db, storeName, options) ->
+    super db, storeName, null, options
 
   execute: ->
     options = @options

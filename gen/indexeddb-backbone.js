@@ -62,8 +62,6 @@
 
     Driver.state = 'closed';
 
-    Driver._transaction = null;
-
     function Driver(schema) {
       this.schema = schema;
       this.stack = [];
@@ -128,54 +126,50 @@
       }
     };
 
-    Driver.prototype._inTransaction = function() {
-      return !!this._transaction;
-    };
-
     Driver.prototype.begin = function(storeNames, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
         _this._transaction = _this.db.transaction(storeNames, IndexedDBBackbone.IDBTransaction.READ_WRITE);
         if ((options != null ? options.success : void 0) != null) {
           _this._transaction.oncomplete = options.success;
         }
         if ((options != null ? options.abort : void 0) != null) {
-          return _this._transaction.onabort = options.abort;
+          _this._transaction.onabort = options.abort;
         }
-      });
-    };
-
-    Driver.prototype.commit = function() {
-      var _this = this;
-      return this.execute(function() {
-        return _this._transaction = null;
-      });
-    };
-
-    Driver.prototype.abort = function() {
-      var _this = this;
-      return this.execute(function() {
-        _this._transaction.abort();
-        return _this._transaction = null;
+        if ((options != null ? options.error : void 0) != null) {
+          _this._transaction.onerror = options.error;
+        }
+        try {
+          return options.callback(_this._transaction);
+        } catch (error) {
+          return options != null ? typeof options.error === "function" ? options.error(error) : void 0 : void 0;
+        }
       });
     };
 
     Driver.prototype.get = function(storeName, object, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeName);
-        request = new IndexedDBBackbone.Driver.GetOperation(transaction, storeName, object, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.GetOperation(_this.db, storeName, object, options);
         return request.execute();
       });
     };
 
     Driver.prototype.query = function(storeName, options) {
       var _this = this;
+      if (options == null) {
+        options = {};
+      }
       return this.execute(function() {
-        var request, transaction;
-        transaction = _this.transaction(storeName);
-        request = new IndexedDBBackbone.Driver.Query(transaction, storeName, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.Query(_this.db, storeName, options);
         return request.execute();
       });
     };
@@ -186,10 +180,8 @@
         options = {};
       }
       return this.execute(function() {
-        var request, transaction;
-        options.inTransaction = _this._inTransaction();
-        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.AddOperation(transaction, [storeName], object, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.AddOperation(_this.db, [storeName], object, options);
         return request.execute();
       });
     };
@@ -200,10 +192,8 @@
         options = {};
       }
       return this.execute(function() {
-        var request, transaction;
-        options.inTransaction = _this._inTransaction();
-        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.PutOperation(transaction, [storeName], object, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.PutOperation(_this.db, [storeName], object, options);
         return request.execute();
       });
     };
@@ -214,10 +204,8 @@
         options = {};
       }
       return this.execute(function() {
-        var request, transaction;
-        options.inTransaction = _this._inTransaction();
-        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.DeleteOperation(transaction, storeName, key, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.DeleteOperation(_this.db, storeName, key, options);
         return request.execute();
       });
     };
@@ -228,19 +216,10 @@
         options = {};
       }
       return this.execute(function() {
-        var request, transaction;
-        options.inTransaction = _this._inTransaction();
-        transaction = _this.transaction([storeName], IndexedDBBackbone.IDBTransaction.READ_WRITE);
-        request = new IndexedDBBackbone.Driver.ClearOperation(transaction, storeName, options);
+        var request;
+        request = new IndexedDBBackbone.Driver.ClearOperation(_this.db, storeName, options);
         return request.execute();
       });
-    };
-
-    Driver.prototype.transaction = function(storeNames, mode) {
-      if (mode == null) {
-        mode = IndexedDBBackbone.IDBTransaction.READ_ONLY;
-      }
-      return this._transaction || this.db.transaction(storeNames, mode);
     };
 
     return Driver;
@@ -249,12 +228,20 @@
 
   IndexedDBBackbone.Driver.Operation = (function() {
 
-    function Operation(transaction, storeName, data, options) {
-      this.transaction = transaction;
+    Operation.prototype.mode = IndexedDBBackbone.IDBTransaction.READ_ONLY;
+
+    function Operation(db, storeName, data, options) {
+      this.db = db;
       this.data = data;
       this.options = options != null ? options : {};
+      this.transaction = this._transaction(storeName);
       this.store = this.transaction.objectStore(storeName);
+      this.exclusiveTransaction = !this.options.transaction;
     }
+
+    Operation.prototype._transaction = function(storeName) {
+      return this.options.transaction || this.db.transaction([storeName], this.mode);
+    };
 
     Operation.prototype.execute = function() {};
 
@@ -270,6 +257,8 @@
       return AddOperation.__super__.constructor.apply(this, arguments);
     }
 
+    AddOperation.prototype.mode = IndexedDBBackbone.IDBTransaction.READ_WRITE;
+
     AddOperation.prototype.execute = function() {
       var request,
         _this = this;
@@ -278,17 +267,17 @@
       } else {
         request = this.store.add(this.data, this.options.key);
       }
-      if (this.options.inTransaction) {
-        request.onerror = this.options.error;
+      if (this.exclusiveTransaction) {
+        this.transaction.onerror = this.options.error;
         if (this.options.success) {
-          return request.onsuccess = function(e) {
+          return this.transaction.oncomplete = function(e) {
             return _this.options.success(_this.data);
           };
         }
       } else {
-        this.transaction.onerror = this.options.error;
+        request.onerror = this.options.error;
         if (this.options.success) {
-          return this.transaction.oncomplete = function(e) {
+          return request.onsuccess = function(e) {
             return _this.options.success(_this.data);
           };
         }
@@ -307,6 +296,8 @@
       return PutOperation.__super__.constructor.apply(this, arguments);
     }
 
+    PutOperation.prototype.mode = IndexedDBBackbone.IDBTransaction.READ_WRITE;
+
     PutOperation.prototype.execute = function() {
       var request,
         _this = this;
@@ -315,17 +306,17 @@
       } else {
         request = this.store.put(this.data, this.options.key);
       }
-      if (this.options.inTransaction) {
-        request.onerror = this.options.error;
+      if (this.exclusiveTransaction) {
+        this.transaction.onerror = this.options.error;
         if (this.options.success) {
-          return request.onsuccess = function(e) {
+          return this.transaction.oncomplete = function(e) {
             return _this.options.success(_this.data);
           };
         }
       } else {
-        this.transaction.onerror = this.options.error;
+        request.onerror = this.options.error;
         if (this.options.success) {
-          return this.transaction.oncomplete = function(e) {
+          return request.onsuccess = function(e) {
             return _this.options.success(_this.data);
           };
         }
@@ -344,21 +335,23 @@
       return DeleteOperation.__super__.constructor.apply(this, arguments);
     }
 
+    DeleteOperation.prototype.mode = IndexedDBBackbone.IDBTransaction.READ_WRITE;
+
     DeleteOperation.prototype.execute = function() {
       var request,
         _this = this;
       request = this.store["delete"](this.data);
-      if (this.options.inTransaction) {
-        request.onerror = this.options.error;
+      if (this.exclusiveTransaction) {
+        this.transaction.onerror = this.options.error;
         if (this.options.success) {
-          return request.onsuccess = function(e) {
+          return this.transaction.oncomplete = function(e) {
             return _this.options.success(_this.data);
           };
         }
       } else {
-        this.transaction.onerror = this.options.error;
+        request.onerror = this.options.error;
         if (this.options.success) {
-          return this.transaction.oncomplete = function(e) {
+          return request.onsuccess = function(e) {
             return _this.options.success(_this.data);
           };
         }
@@ -373,19 +366,21 @@
 
     __extends(ClearOperation, _super);
 
-    function ClearOperation(transaction, storeName, options) {
-      ClearOperation.__super__.constructor.call(this, transaction, storeName, null, options);
+    ClearOperation.prototype.mode = IndexedDBBackbone.IDBTransaction.READ_WRITE;
+
+    function ClearOperation(db, storeName, options) {
+      ClearOperation.__super__.constructor.call(this, db, storeName, null, options);
     }
 
     ClearOperation.prototype.execute = function() {
       var request;
       request = this.store.clear();
-      if (this.options.inTransaction) {
-        request.oncomplete = this.options.success;
-        return request.onerror = this.options.error;
-      } else {
+      if (this.exclusiveTransaction) {
         this.transaction.oncomplete = this.options.success;
         return this.transaction.onerror = this.options.error;
+      } else {
+        request.oncomplete = this.options.success;
+        return request.onerror = this.options.error;
       }
     };
 
@@ -437,8 +432,8 @@
 
     __extends(Query, _super);
 
-    function Query(transaction, storeName, options) {
-      Query.__super__.constructor.call(this, transaction, storeName, null, options);
+    function Query(db, storeName, options) {
+      Query.__super__.constructor.call(this, db, storeName, null, options);
     }
 
     Query.prototype.execute = function() {
@@ -517,15 +512,6 @@
           return obj.storeName;
         }).uniq().value();
         return IndexedDBBackbone._getDriver(dbName).begin(storeNames, options);
-      case "commit":
-      case "abort":
-        if (object instanceof Array) {
-          objects = object;
-        } else {
-          objects = [object];
-        }
-        dbName = objects[0].database;
-        return IndexedDBBackbone._getDriver(dbName)[method]();
       case "read":
         if (object instanceof Backbone.Model) {
           return IndexedDBBackbone._getDriver(object.database).get(object.storeName, object.toJSON(), options);
@@ -645,18 +631,12 @@
 
   IndexedDBBackbone.transaction = function(objects, callback, options) {
     var indexedDB;
-    indexedDB = IndexedDBBackbone.indexedDB;
-    IndexedDBBackbone.sync('begin', objects, options);
-    try {
-      if (callback()) {
-        return IndexedDBBackbone.sync('commit', objects);
-      } else {
-        return IndexedDBBackbone.sync('abort', objects);
-      }
-    } catch (error) {
-      IndexedDBBackbone.sync('abort', objects);
-      return options != null ? typeof options.error === "function" ? options.error(error) : void 0 : void 0;
+    if (options == null) {
+      options = {};
     }
+    indexedDB = IndexedDBBackbone.indexedDB;
+    options.callback = callback;
+    return IndexedDBBackbone.sync('begin', objects, options);
   };
 
   Backbone.transaction = IndexedDBBackbone.transaction;
