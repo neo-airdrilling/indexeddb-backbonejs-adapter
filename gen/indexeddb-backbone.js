@@ -379,7 +379,7 @@
         this.transaction.oncomplete = this.options.success;
         return this.transaction.onerror = this.options.error;
       } else {
-        request.oncomplete = this.options.success;
+        request.onsuccess = this.options.success;
         return request.onerror = this.options.error;
       }
     };

@@ -77,7 +77,7 @@ class IndexedDBBackbone.Driver.ClearOperation extends IndexedDBBackbone.Driver.O
       @transaction.oncomplete = @options.success
       @transaction.onerror = @options.error
     else
-      request.oncomplete = @options.success
+      request.onsuccess = @options.success
       request.onerror = @options.error
 
 class IndexedDBBackbone.Driver.GetOperation extends IndexedDBBackbone.Driver.Operation
