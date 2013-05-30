@@ -48,8 +48,6 @@ IndexedDBBackbone.sync = (method, object, options) ->
     when "create", "update"
       if method == "create"
         method = "add"
-        # this will be ignored if store doesn't have a keyPath and uses key generator
-        object.set(object.idAttribute, IndexedDBBackbone.guid()) unless object.id?
       else
         method = "put"
 

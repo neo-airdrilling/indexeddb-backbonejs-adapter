@@ -6,12 +6,6 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   IndexedDBBackbone = {
-    S4: function() {
-      return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
-    },
-    guid: function() {
-      return this.S4() + this.S4() + "-" + this.S4() + "-" + this.S4() + "-" + this.S4() + "-" + this.S4() + this.S4() + this.S4();
-    },
     value: function(object, key) {
       return _.reduce(key.split('.'), (function(obj, key) {
         return obj != null ? obj[key] : void 0;
@@ -268,6 +262,11 @@
         request = this.store.add(this.data, this.options.key);
       }
       if (this.exclusiveTransaction) {
+        if (this.store.keyPath) {
+          request.onsuccess = function(e) {
+            return _this.data[_this.store.keyPath] = e.target.result;
+          };
+        }
         this.transaction.onerror = this.options.error;
         if (this.options.success) {
           return this.transaction.oncomplete = function(e) {
@@ -276,11 +275,13 @@
         }
       } else {
         request.onerror = this.options.error;
-        if (this.options.success) {
-          return request.onsuccess = function(e) {
-            return _this.options.success(_this.data);
-          };
-        }
+        return request.onsuccess = function(e) {
+          var _base;
+          if (_this.store.keyPath) {
+            _this.data[_this.store.keyPath] = e.target.result;
+          }
+          return typeof (_base = _this.options).success === "function" ? _base.success(_this.data) : void 0;
+        };
       }
     };
 
@@ -526,9 +527,6 @@
       case "update":
         if (method === "create") {
           method = "add";
-          if (object.id == null) {
-            object.set(object.idAttribute, IndexedDBBackbone.guid());
-          }
         } else {
           method = "put";
         }

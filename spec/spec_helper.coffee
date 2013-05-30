@@ -2,11 +2,11 @@
 DBNAME = "movies-database"
 
 IndexedDBBackbone.describe(DBNAME)
-  .createStore('movies', keyPath: 'imdb')
+  .createStore('movies', keyPath: 'imdb', autoIncrement: true)
   .createIndex('movies', 'titleIndex', 'title', unique: false)
   .createIndex('movies', 'formatIndex', 'format', unique: false)
   .createIndex('movies', 'releaseIndex', 'release.year', unique: false)
-  .createStore('torrents', keyPath: 'id')
+  .createStore('torrents', keyPath: 'id', autoIncrement: true)
 
 # Models
 class window.Movie extends Backbone.Model

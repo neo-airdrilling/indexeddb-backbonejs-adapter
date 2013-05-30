@@ -22,13 +22,17 @@ class IndexedDBBackbone.Driver.AddOperation extends IndexedDBBackbone.Driver.Ope
       request = @store.add(@data, @options.key)
 
     if @exclusiveTransaction
+      if @store.keyPath
+        request.onsuccess = (e) => @data[@store.keyPath] = e.target.result
       @transaction.onerror = @options.error
       if @options.success
         @transaction.oncomplete = (e) => @options.success(@data)
     else
       request.onerror = @options.error
-      if @options.success
-        request.onsuccess = (e) => @options.success(@data)
+      request.onsuccess = (e) =>
+        @data[@store.keyPath] = e.target.result if @store.keyPath
+        @options.success?(@data)
+
 
 class IndexedDBBackbone.Driver.PutOperation extends IndexedDBBackbone.Driver.Operation
   mode: IndexedDBBackbone.IDBTransaction.READ_WRITE

@@ -14,41 +14,35 @@ describe "Backbone.transaction", ->
 
   it 'runs all operations in a transaction', ->
     asyncTest ->
-
       success1 = jasmine.createSpy()
       success2 = jasmine.createSpy()
       success3 = jasmine.createSpy()
-      success4 = jasmine.createSpy()
-      success5 = jasmine.createSpy()
-      success6 = jasmine.createSpy()
 
       Backbone.transaction [kenshin, torrent],
         (transaction) ->
           #create
           theWall.save undefined,
             transaction: transaction
-            success: success1
+            success: ->
+              #update
+              theWall.save { name: 'UPDATED' },
+                transaction: transaction
+                success: ->
+                  #destroy
+                  theWall.destroy
+                    transaction: transaction
+                    success: success1
           kenshin.save undefined,
             transaction: transaction
             success: success2
           torrent.save undefined,
             transaction: transaction
             success: success3
-          #update
-          theWall.save { name: 'UPDATED' },
-            transaction: transaction
-            success: success4
-          #destroy
-          theWall.destroy
-            transaction: transaction
-            success: success5
 
         success: ->
           expect(success1).toHaveBeenCalled()
           expect(success2).toHaveBeenCalled()
           expect(success3).toHaveBeenCalled()
-          expect(success4).toHaveBeenCalled()
-          expect(success5).toHaveBeenCalled()
 
           new Theater().fetch
             success: (movies) ->
