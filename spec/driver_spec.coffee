@@ -140,7 +140,7 @@ describe 'IndexedDBBackbone.Driver', ->
     describe 'with inline-key', ->
       it 'updates an existing object in the store if it exists', ->
         withStore 'store_with_inline_key', ->
-          driver.put 'store_with_inline_key', { name: 'Smith', ssn: 1337 }
+          driver.put 'store_with_inline_key', { name: 'Smith', ssn: 1337 },
             success: (e) ->
               expectStore 'store_with_inline_key', (store) ->
                 store.count().onsuccess = (e) ->
@@ -194,9 +194,9 @@ describe 'IndexedDBBackbone.Driver', ->
   describe 'delete', ->
     it 'deletes the indicated object', ->
       withStore 'store_with_inline_key', ->
-        driver.add 'store_with_inline_key', { name: 'Smith', ssn: 1338 }
+        driver.add 'store_with_inline_key', { name: 'Smith', ssn: 1338 },
           success: ->
-            driver.delete 'store_with_inline_key', 1338
+            driver.delete 'store_with_inline_key', 1338,
               success: (e) ->
                 expectStore 'store_with_inline_key', (store) ->
                   store.count().onsuccess = (e) ->
@@ -207,7 +207,7 @@ describe 'IndexedDBBackbone.Driver', ->
   describe 'clear', ->
     it 'clears the entire store', ->
       withStore 'store_with_inline_key', ->
-        driver.clear 'store_with_inline_key'
+        driver.clear 'store_with_inline_key',
           success: ->
             expectStore 'store_with_inline_key', (store) ->
               store.count().onsuccess = (e) ->
