@@ -23,6 +23,9 @@ class IndexedDBBackbone.Driver
 
     dbRequest.onsuccess = (e) =>
       @db = e.target.result
+      @db.onversionchange = (e) =>
+        @logger("Database version changes on another tab. Closing this tab's connection.")
+        @db.close()
       @state = 'open'
       @ready()
 
